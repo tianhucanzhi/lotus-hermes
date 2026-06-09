@@ -1,0 +1,43 @@
+启动
+
+    # 1. 安装 uv（若还没有）
+
+    irm https://astral.sh/uv/install.ps1 | iex
+
+    $env:Path = "C:\Users\Administrator\.local\bin;$env:Path"
+
+    # 2. 进入项目目录
+
+    cd f:\LLM\my_project\hermes-agent
+
+    # 3. 创建虚拟环境
+
+    uv venv .venv --python 3.11
+
+    # 4. 激活虚拟环境
+
+    .\.venv\Scripts\Activate.ps1
+
+    # 5. 安装依赖（会注册 lotus 命令）
+
+    uv pip install -e ".[all,dev]"
+
+    # 6. 运行
+
+    python -m hermes_cli.main          # 或
+
+    .\.venv\Scripts\lotus.exe
+
+    lotus                              # 交互对话
+
+    lotus --tui                        # TUI 界面
+
+    lotus setup                        # 首次配置
+桌面版
+    lotus desktop 启动。
+打包成exe
+    cd F:\LLM\my_project\hermes-agent\apps\desktop
+    npm run dist:win          # 同时生成 NSIS + MSI
+    # 或只要安装程序：
+    npm run dist:win:nsis     # 只要 NSIS 安装包
+
