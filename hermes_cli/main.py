@@ -7425,38 +7425,61 @@ def _write_desktop_build_stamp(project_root: Path, *, source_mode: bool) -> None
         logger.debug("Failed to write desktop build stamp: %s", exc)
 
 
+def _desktop_pack_output_dirs(desktop_dir: Path) -> list[Path]:
+    """Return pack output roots, newest/preferred first."""
+    dirs: list[Path] = []
+    override = os.environ.get("HERMES_DESKTOP_PACK_OUTPUT")
+    if override:
+        dirs.append(Path(override).expanduser().resolve())
+    if sys.platform == "win32":
+        local = os.environ.get("LOCALAPPDATA")
+        if local:
+            dirs.append(Path(local) / "Lotus" / "desktop-pack")
+    dirs.append(desktop_dir / "release")
+
+    seen: set[Path] = set()
+    out: list[Path] = []
+    for d in dirs:
+        rd = d.resolve()
+        if rd not in seen:
+            seen.add(rd)
+            out.append(rd)
+    return out
+
+
 def _desktop_packaged_executable(desktop_dir: Path) -> Optional[Path]:
     """Return the current platform's unpacked Electron app executable."""
     from hermes_constants import AGENT_DISPLAY_NAME
 
-    release_dir = desktop_dir / "release"
     app_name = AGENT_DISPLAY_NAME
     legacy_name = "Hermes"
-    if sys.platform == "darwin":
-        candidates = (
-            list(release_dir.glob(f"mac*/{app_name}.app/Contents/MacOS/{app_name}"))
-            + list(release_dir.glob(f"mac*/{legacy_name}.app/Contents/MacOS/{legacy_name}"))
-        )
-    elif sys.platform == "win32":
-        candidates = [
-            release_dir / "win-unpacked" / f"{app_name}.exe",
-            release_dir / "win-ia32-unpacked" / f"{app_name}.exe",
-            release_dir / "win-arm64-unpacked" / f"{app_name}.exe",
-            release_dir / "win-unpacked" / f"{legacy_name}.exe",
-            release_dir / "win-ia32-unpacked" / f"{legacy_name}.exe",
-            release_dir / "win-arm64-unpacked" / f"{legacy_name}.exe",
-        ]
-    else:
-        candidates = [
-            release_dir / "linux-unpacked" / app_name.lower(),
-            release_dir / "linux-unpacked" / app_name,
-            release_dir / "linux-arm64-unpacked" / app_name.lower(),
-            release_dir / "linux-arm64-unpacked" / app_name,
-            release_dir / "linux-unpacked" / legacy_name.lower(),
-            release_dir / "linux-unpacked" / legacy_name,
-            release_dir / "linux-arm64-unpacked" / legacy_name.lower(),
-            release_dir / "linux-arm64-unpacked" / legacy_name,
-        ]
+    candidates: list[Path] = []
+    for release_dir in _desktop_pack_output_dirs(desktop_dir):
+        if sys.platform == "darwin":
+            candidates.extend(
+                list(release_dir.glob(f"mac*/{app_name}.app/Contents/MacOS/{app_name}"))
+                + list(release_dir.glob(f"mac*/{legacy_name}.app/Contents/MacOS/{legacy_name}"))
+            )
+        elif sys.platform == "win32":
+            candidates.extend([
+                release_dir / "win-unpacked" / f"{app_name}.exe",
+                release_dir / "win-ia32-unpacked" / f"{app_name}.exe",
+                release_dir / "win-arm64-unpacked" / f"{app_name}.exe",
+                release_dir / "win-unpacked" / f"{legacy_name}.exe",
+                release_dir / "win-ia32-unpacked" / f"{legacy_name}.exe",
+                release_dir / "win-arm64-unpacked" / f"{legacy_name}.exe",
+            ])
+        else:
+            candidates.extend([
+                release_dir / "linux-unpacked" / app_name.lower(),
+                release_dir / "linux-unpacked" / app_name,
+                release_dir / "linux-arm64-unpacked" / app_name.lower(),
+                release_dir / "linux-arm64-unpacked" / app_name,
+                release_dir / "linux-unpacked" / legacy_name.lower(),
+                release_dir / "linux-unpacked" / legacy_name,
+                release_dir / "linux-arm64-unpacked" / legacy_name.lower(),
+                release_dir / "linux-arm64-unpacked" / legacy_name,
+            ])
 
     existing = [p for p in candidates if p.exists()]
     if not existing:

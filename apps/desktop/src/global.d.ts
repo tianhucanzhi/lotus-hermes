@@ -81,6 +81,11 @@ declare global {
       cancelBootstrap: () => Promise<{ ok: boolean; cancelled: boolean }>
       onBootstrapEvent: (callback: (payload: DesktopBootstrapEvent) => void) => () => void
       getVersion: () => Promise<DesktopVersionInfo>
+      activation: {
+        getStatus: () => Promise<DesktopActivationStatus>
+        redeem: (code: string) => Promise<DesktopActivationRedeemResult>
+        clear: () => Promise<{ ok: boolean }>
+      }
       updates: {
         check: () => Promise<DesktopUpdateStatus>
         apply: (opts?: DesktopUpdateApplyOptions) => Promise<DesktopUpdateApplyResult>
@@ -113,6 +118,37 @@ export interface DesktopVersionInfo {
   nodeVersion: string
   platform: string
   hermesRoot: string
+}
+
+export type DesktopActivationError =
+  | 'disabled'
+  | 'expired'
+  | 'invalid_code'
+  | 'max_devices'
+  | 'network'
+  | 'not_activated'
+  | 'not_found'
+
+export interface DesktopActivationStatus {
+  activated: boolean
+  skipped?: boolean
+  code?: string
+  expiresAt?: string
+  activatedAt?: string
+  machineId?: string
+  offline?: boolean
+  reason?: DesktopActivationError
+}
+
+export interface DesktopActivationRedeemResult {
+  ok: boolean
+  skipped?: boolean
+  code?: string
+  expiresAt?: string
+  activatedAt?: string
+  machineId?: string
+  error?: DesktopActivationError
+  message?: string
 }
 
 export type DesktopUninstallMode = 'full' | 'gui' | 'lite'

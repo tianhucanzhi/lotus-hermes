@@ -148,12 +148,68 @@ function stageOne(spec) {
   console.log(`[stage-native-deps] ${path.relative(APP_ROOT, spec.to)}: ${copied} files`)
 }
 
+// mysql2 is pure JS but electron-builder's explicit `files:` list excludes all
+// of node_modules from the asar. Stage mysql2 + its runtime deps so the main
+// process can validate activation codes in packaged builds.
+const MYSQL2_BUNDLE_ROOT = path.join(STAGE_ROOT, 'mysql2-bundle', 'node_modules')
+const MYSQL2_ROOT_PACKAGES = ['mysql2']
+
+function readPackageJson(pkgDir) {
+  return JSON.parse(fs.readFileSync(path.join(pkgDir, 'package.json'), 'utf8'))
+}
+
+function copyPackageTree(pkgName, copied) {
+  if (copied.has(pkgName)) {
+    return
+  }
+
+  const srcRoot = path.join(REPO_ROOT, 'node_modules', pkgName)
+
+  if (!fs.existsSync(srcRoot)) {
+    throw new Error(
+      `stage-native-deps: missing dependency ${pkgName} at ${srcRoot}. Run npm install at the workspace root.`
+    )
+  }
+
+  copied.add(pkgName)
+  const destRoot = path.join(MYSQL2_BUNDLE_ROOT, pkgName)
+  rmrf(destRoot)
+  ensureDir(destRoot)
+
+  let fileCount = 0
+  for (const abs of walk(srcRoot)) {
+    const rel = path.relative(srcRoot, abs)
+    const dest = path.join(destRoot, rel)
+    ensureDir(path.dirname(dest))
+    fs.copyFileSync(abs, dest)
+    fileCount += 1
+  }
+
+  const manifest = readPackageJson(srcRoot)
+  for (const dep of Object.keys(manifest.dependencies || {})) {
+    copyPackageTree(dep, copied)
+  }
+
+  console.log(`[stage-native-deps] mysql2-bundle/${pkgName}: ${fileCount} files`)
+}
+
+function stageMysql2Bundle() {
+  rmrf(path.join(STAGE_ROOT, 'mysql2-bundle'))
+  ensureDir(MYSQL2_BUNDLE_ROOT)
+
+  const copied = new Set()
+  for (const pkgName of MYSQL2_ROOT_PACKAGES) {
+    copyPackageTree(pkgName, copied)
+  }
+}
+
 function main() {
   rmrf(STAGE_ROOT)
   ensureDir(STAGE_ROOT)
   for (const spec of NATIVE_DEPS) {
     stageOne(spec)
   }
+  stageMysql2Bundle()
 }
 
 main()

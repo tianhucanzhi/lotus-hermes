@@ -1028,6 +1028,22 @@ export interface Translations {
     reloadRetry: string
   }
 
+  activation: {
+    title: string
+    description: string
+    codeLabel: string
+    codePlaceholder: string
+    hint: string
+    activate: string
+    activating: string
+    networkError: string
+    expiresAt: (date: string) => string
+    errors: Record<
+      'disabled' | 'expired' | 'invalid_code' | 'max_devices' | 'not_activated' | 'not_found',
+      string
+    >
+  }
+
   onboarding: {
     headerTitle: string
     headerDesc: string

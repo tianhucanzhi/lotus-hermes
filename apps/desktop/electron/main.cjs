@@ -24,6 +24,11 @@ const net = require('node:net')
 const path = require('node:path')
 const { fileURLToPath, pathToFileURL } = require('node:url')
 const { execFileSync, spawn } = require('node:child_process')
+const {
+  clearLocalActivation,
+  getActivationStatus,
+  redeemActivationCode
+} = require('./activation.cjs')
 const { detectRemoteDisplay, isWindowsBinaryPathInWsl, isWslEnvironment } = require('./bootstrap-platform.cjs')
 const { runBootstrap } = require('./bootstrap-runner.cjs')
 const { canImportHermesCli, verifyHermesCli } = require('./backend-probes.cjs')
@@ -235,6 +240,7 @@ const BOOTSTRAP_COMPLETE_MARKER = path.join(ACTIVE_HERMES_ROOT, '.hermes-bootstr
 const BOOTSTRAP_MARKER_SCHEMA_VERSION = 1
 
 const DESKTOP_CONNECTION_CONFIG_PATH = path.join(app.getPath('userData'), 'connection.json')
+const DESKTOP_ACTIVATION_PATH = path.join(app.getPath('userData'), 'activation.json')
 const DESKTOP_UPDATE_CONFIG_PATH = path.join(app.getPath('userData'), 'updates.json')
 // active-profile.json records which Hermes profile the desktop launches its
 // local backend as. When set, startHermes() passes `hermes --profile <name>
@@ -5595,6 +5601,23 @@ ipcMain.handle('hermes:version', async () => ({
   platform: process.platform,
   hermesRoot: resolveUpdateRoot()
 }))
+
+ipcMain.handle('hermes:activation:status', async () =>
+  getActivationStatus({
+    localPath: DESKTOP_ACTIVATION_PATH,
+    appVersion: resolveHermesVersion()
+  })
+)
+
+ipcMain.handle('hermes:activation:redeem', async (_event, code) =>
+  redeemActivationCode({
+    localPath: DESKTOP_ACTIVATION_PATH,
+    code,
+    appVersion: resolveHermesVersion()
+  })
+)
+
+ipcMain.handle('hermes:activation:clear', async () => clearLocalActivation(DESKTOP_ACTIVATION_PATH))
 
 // ===========================================================================
 // Uninstall — remove the Chat GUI (and optionally the agent / user data).

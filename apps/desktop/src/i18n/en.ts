@@ -1338,6 +1338,26 @@ export const en: Translations = {
     reloadRetry: 'Reload and retry'
   },
 
+  activation: {
+    title: 'Activate Lotus',
+    description: 'Enter your activation code to use the desktop app. Codes are device-bound and expire.',
+    codeLabel: 'Activation code',
+    codePlaceholder: 'e.g. LOTUS-XXXX-XXXX',
+    hint: 'Codes are case-insensitive; input is uppercased automatically.',
+    activate: 'Activate',
+    activating: 'Verifying…',
+    networkError: 'Could not reach the activation server. Check your network and try again.',
+    expiresAt: date => `Valid until ${date}`,
+    errors: {
+      not_activated: 'Enter an activation code to continue.',
+      not_found: 'Activation code not found.',
+      expired: 'This activation code has expired.',
+      disabled: 'This activation code has been disabled.',
+      max_devices: 'This code has reached its device limit.',
+      invalid_code: 'Enter a valid activation code.'
+    }
+  },
+
   onboarding: {
     headerTitle: "Let's get you setup with Lotus Agent",
     headerDesc: 'Connect a model provider to start chatting. Most options take one click.',

@@ -1523,6 +1523,26 @@ export const zh: Translations = {
     reloadRetry: '重新加载并重试'
   },
 
+  activation: {
+    title: '激活 Lotus',
+    description: '请输入激活码以使用桌面版。激活码与设备绑定，到期后需续期。',
+    codeLabel: '激活码',
+    codePlaceholder: '例如 LOTUS-XXXX-XXXX',
+    hint: '激活码区分大小写，输入时会自动转为大写。',
+    activate: '立即激活',
+    activating: '正在验证…',
+    networkError: '无法连接激活服务器，请检查网络后重试。',
+    expiresAt: date => `有效期至 ${date}`,
+    errors: {
+      not_activated: '请先输入激活码。',
+      not_found: '激活码不存在，请核对后重试。',
+      expired: '激活码已过期，请联系管理员续期。',
+      disabled: '激活码已被禁用。',
+      max_devices: '该激活码已达到最大设备数。',
+      invalid_code: '请输入有效的激活码。'
+    }
+  },
+
   onboarding: {
     headerTitle: '开始设置 Lotus Agent',
     headerDesc: '连接模型提供方即可开始对话。大多数选项只需一次点击。',
