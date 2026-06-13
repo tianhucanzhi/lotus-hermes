@@ -56,7 +56,16 @@ param(
     #   * The canonical CLI one-liner (irm | iex) omits the flag too;
     #     terminal users don't need a desktop binary built for them, and
     #     `hermes desktop` already builds on demand.
-    [switch]$IncludeDesktop
+    [switch]$IncludeDesktop,
+
+    # --- Repository source (desktop bootstrap / fork installs) ---
+    # Defaults preserve upstream NousResearch/hermes-agent behaviour.
+    [string]$RepoUrlHttps = "https://github.com/NousResearch/hermes-agent.git",
+    [string]$RepoUrlSsh = "git@github.com:NousResearch/hermes-agent.git",
+
+    # Packaged Lotus/Hermes desktop builds ship a git-archive zip of the agent
+    # source so first launch can install offline without GitHub access.
+    [string]$BundledSourceArchive = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -92,10 +101,18 @@ try {
 # Configuration
 # ============================================================================
 
-$RepoUrlSsh = "git@github.com:NousResearch/hermes-agent.git"
-$RepoUrlHttps = "https://github.com/NousResearch/hermes-agent.git"
 $PythonVersion = "3.11"
 $NodeVersion = "22"
+
+function Get-GitHubRepoSlug {
+    param([string]$HttpsUrl)
+    if ($HttpsUrl -match 'github\.com[:/](?<owner>[^/]+)/(?<repo>[^/.]+)(?:\.git)?$') {
+        return "$($Matches.owner)/$($Matches.repo)"
+    }
+    throw "Cannot parse GitHub repo slug from $HttpsUrl"
+}
+
+$GitHubRepoSlug = Get-GitHubRepoSlug $RepoUrlHttps
 
 # Stage-protocol version.  Bumped only for genuinely breaking changes to the
 # manifest schema, stage-name set semantics, or stdout JSON shape.  Adding a
@@ -1050,12 +1067,66 @@ function Install-SystemPackages {
 # Installation
 # ============================================================================
 
+function Test-InstallRepoValid {
+    if (-not (Test-Path "$InstallDir\.git")) { return $false }
+    Push-Location $InstallDir
+    try {
+        $global:LASTEXITCODE = 0
+        $revParseOut = & git -c windows.appendAtomically=false rev-parse --is-inside-work-tree 2>&1
+        $revParseOk = ($LASTEXITCODE -eq 0) -and ($revParseOut -match "true")
+        $global:LASTEXITCODE = 0
+        $null = & git -c windows.appendAtomically=false status --short 2>&1
+        $statusOk = ($LASTEXITCODE -eq 0)
+        return ($revParseOk -and $statusOk)
+    } catch {
+        return $false
+    } finally {
+        Pop-Location
+    }
+}
+
+function Install-FromBundledSource {
+    param([Parameter(Mandatory = $true)][string]$ArchivePath)
+
+    if (Test-Path $InstallDir) {
+        Remove-Item -Recurse -Force $InstallDir -ErrorAction SilentlyContinue
+    }
+    New-Item -ItemType Directory -Force -Path (Split-Path $InstallDir) -ErrorAction SilentlyContinue | Out-Null
+    New-Item -ItemType Directory -Force -Path $InstallDir -ErrorAction SilentlyContinue | Out-Null
+
+    Write-Info "Extracting bundled agent source from $ArchivePath ..."
+    Expand-Archive -Path $ArchivePath -DestinationPath $InstallDir -Force
+
+    Push-Location $InstallDir
+    git -c windows.appendAtomically=false init 2>$null
+    git -c windows.appendAtomically=false config windows.appendAtomically false 2>$null
+    git -c windows.appendAtomically=false config core.autocrlf false 2>$null
+    git remote add origin $RepoUrlHttps 2>$null
+    Pop-Location
+    Write-Success "Installed agent from bundled source archive (offline)"
+}
+
 function Install-Repository {
     Write-Info "Installing to $InstallDir..."
 
     $didUpdate = $false
+    $installedFromBundled = $false
 
-    if (Test-Path $InstallDir) {
+    if ($BundledSourceArchive -and (Test-Path $BundledSourceArchive)) {
+        $needsFreshInstall = $false
+        if (-not (Test-Path $InstallDir)) {
+            $needsFreshInstall = $true
+        } elseif (-not (Test-InstallRepoValid)) {
+            Write-Warn "Existing directory at $InstallDir is not a valid git repo -- replacing from bundled source."
+            $needsFreshInstall = $true
+        }
+        if ($needsFreshInstall) {
+            Install-FromBundledSource -ArchivePath $BundledSourceArchive
+            $installedFromBundled = $true
+        }
+    }
+
+    if (-not $installedFromBundled -and (Test-Path $InstallDir)) {
         # Test-Path "$InstallDir\.git" returns True when .git is a file OR a
         # directory OR a symlink OR a submodule-style gitfile -- and also when
         # it's a broken stub left over from a failed previous install (e.g.
@@ -1063,26 +1134,7 @@ function Install-Repository {
         # Validate the repo properly by asking git itself.  Two checks
         # belt-and-braces: rev-parse AND git status.  If either fails the
         # repo is broken and we fall through to a fresh clone.
-        $repoValid = $false
-        if (Test-Path "$InstallDir\.git") {
-            Push-Location $InstallDir
-            try {
-                # Reset $LASTEXITCODE before the probe so we don't pick up
-                # a stale 0 from an earlier git call in this session.
-                $global:LASTEXITCODE = 0
-                $revParseOut = & git -c windows.appendAtomically=false rev-parse --is-inside-work-tree 2>&1
-                $revParseOk = ($LASTEXITCODE -eq 0) -and ($revParseOut -match "true")
-
-                $global:LASTEXITCODE = 0
-                $null = & git -c windows.appendAtomically=false status --short 2>&1
-                $statusOk = ($LASTEXITCODE -eq 0)
-
-                if ($revParseOk -and $statusOk) {
-                    $repoValid = $true
-                }
-            } catch {}
-            Pop-Location
-        }
+        $repoValid = Test-InstallRepoValid
 
         if ($repoValid) {
             Write-Info "Existing installation found, updating..."
@@ -1215,7 +1267,7 @@ function Install-Repository {
         }
     }
 
-    if (-not $didUpdate) {
+    if (-not $installedFromBundled -and -not $didUpdate) {
         $cloneSuccess = $false
 
         # Fix Windows git "copy-fd: write returned: Invalid argument" error.
@@ -1255,13 +1307,13 @@ function Install-Repository {
                 # for.  GitHub supports archive URLs for commits, tags, and
                 # branches; we honour Commit > Tag > Branch.
                 if ($Commit) {
-                    $zipUrl = "https://github.com/NousResearch/hermes-agent/archive/$Commit.zip"
+                    $zipUrl = "https://github.com/$GitHubRepoSlug/archive/$Commit.zip"
                     $zipLabel = $Commit
                 } elseif ($Tag) {
-                    $zipUrl = "https://github.com/NousResearch/hermes-agent/archive/refs/tags/$Tag.zip"
+                    $zipUrl = "https://github.com/$GitHubRepoSlug/archive/refs/tags/$Tag.zip"
                     $zipLabel = $Tag
                 } else {
-                    $zipUrl = "https://github.com/NousResearch/hermes-agent/archive/refs/heads/$Branch.zip"
+                    $zipUrl = "https://github.com/$GitHubRepoSlug/archive/refs/heads/$Branch.zip"
                     $zipLabel = $Branch
                 }
                 $zipPath = "$env:TEMP\hermes-agent-$zipLabel.zip"
@@ -1315,7 +1367,7 @@ function Install-Repository {
     # $Branch's tip, honour the higher-precedence $Commit / $Tag by checking
     # the exact ref out as a detached HEAD.  Skipped for the in-place update
     # path (above) since that already routed via the same precedence.
-    if (-not $didUpdate) {
+    if (-not $didUpdate -and -not $installedFromBundled) {
         # Same EAP=Continue wrap as the update path -- git fetch's 'From <url>'
         # info line goes to stderr and would terminate the script under the
         # global EAP=Stop otherwise.  We check $LASTEXITCODE for real errors.

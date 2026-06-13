@@ -41,6 +41,7 @@
     "lint:fix": "eslint src/ electron/ --fix",
     "fmt": "prettier --write 'src/**/*.{ts,tsx}' 'electron/**/*.{js,cjs}' 'vite.config.ts'",
     "fix": "npm run lint:fix && npm run fmt",
+    "generate-icons": "node scripts/generate-icons.cjs",
     "test:ui": "vitest run --environment jsdom",
     "preview": "node scripts/assert-root-install.cjs && vite preview --host 127.0.0.1 --port 4174"
   },
@@ -153,6 +154,14 @@
       {
         "from": "build/install-stamp.json",
         "to": "install-stamp.json"
+      },
+      {
+        "from": "build/installer",
+        "to": "installer"
+      },
+      {
+        "from": "build/agent-source.zip",
+        "to": "agent-source.zip"
       },
       {
         "from": "build/native-deps",

@@ -72,6 +72,54 @@ function resolveLocalInstallScript(sourceRepoRoot) {
   }
 }
 
+function resolveBundledInstallScript() {
+  const resourcesPath = process.resourcesPath
+  if (!resourcesPath) return null
+  const candidate = path.join(resourcesPath, 'installer', installScriptName())
+  try {
+    fs.accessSync(candidate, fs.constants.R_OK)
+    return candidate
+  } catch {
+    return null
+  }
+}
+
+function resolveBundledAgentSourceArchive() {
+  const resourcesPath = process.resourcesPath
+  if (!resourcesPath) return null
+  const candidate = path.join(resourcesPath, 'agent-source.zip')
+  try {
+    fs.accessSync(candidate, fs.constants.R_OK)
+    return candidate
+  } catch {
+    return null
+  }
+}
+
+function normalizeRepoUrl(raw) {
+  if (!raw || typeof raw !== 'string') return null
+  let url = raw.trim()
+  if (!url) return null
+  const ssh = url.match(/^git@github\.com:(.+?)(?:\.git)?$/i)
+  if (ssh) url = `https://github.com/${ssh[1]}`
+  if (!url.endsWith('.git') && /github\.com/i.test(url)) url = `${url}.git`
+  return url
+}
+
+function parseGitHubSlug(repoUrl) {
+  const normalized = normalizeRepoUrl(repoUrl) || ''
+  const match = normalized.match(/github\.com[/:]([^/]+)\/([^/.]+)/i)
+  if (!match) {
+    return { owner: 'NousResearch', repo: 'hermes-agent' }
+  }
+  return { owner: match[1], repo: match[2].replace(/\.git$/, '') }
+}
+
+function httpsToSshRepoUrl(httpsUrl) {
+  const slug = parseGitHubSlug(httpsUrl)
+  return `git@github.com:${slug.owner}/${slug.repo}.git`
+}
+
 function bootstrapCacheDir(hermesHome) {
   return path.join(hermesHome, 'bootstrap-cache')
 }
@@ -95,12 +143,13 @@ function cachedScriptPath(hermesHome, commit) {
   return path.join(bootstrapCacheDir(hermesHome), `install-${commit}.${process.platform === 'win32' ? 'ps1' : 'sh'}`)
 }
 
-function downloadInstallScript(commit, destPath) {
+function downloadInstallScript(commit, destPath, repoUrl) {
   // Fetch from GitHub raw at the pinned commit. The raw URL with a SHA
   // is immutable (unlike a branch ref), so we don't need integrity
   // verification beyond "did the file we wrote pass a syntax probe."
   const scriptName = installScriptName()
-  const url = `https://raw.githubusercontent.com/NousResearch/hermes-agent/${commit}/scripts/${scriptName}`
+  const slug = parseGitHubSlug(repoUrl)
+  const url = `https://raw.githubusercontent.com/${slug.owner}/${slug.repo}/${commit}/scripts/${scriptName}`
   return new Promise((resolve, reject) => {
     fs.mkdirSync(path.dirname(destPath), { recursive: true })
     const tmpPath = destPath + '.tmp'
@@ -180,7 +229,19 @@ async function resolveInstallScript({ installStamp, sourceRepoRoot, hermesHome, 
     return { path: localScript, source: 'local', kind: installScriptKind() }
   }
 
-  // 2. Packaged path: download from GitHub at the pinned commit (1B's stamp).
+  // 2. Packaged shortcut: use the installer bundled next to install-stamp.json.
+  const bundledScript = resolveBundledInstallScript()
+  if (bundledScript) {
+    emit({ type: 'log', line: `[bootstrap] using bundled ${installScriptName()} at ${bundledScript}` })
+    return {
+      path: bundledScript,
+      source: 'bundled',
+      commit: installStamp?.commit || null,
+      kind: installScriptKind()
+    }
+  }
+
+  // 3. Packaged fallback: download from GitHub at the pinned commit (1B's stamp).
   if (!installStamp || !installStamp.commit || !STAMP_COMMIT_RE.test(installStamp.commit)) {
     throw new Error(
       `Cannot resolve ${installScriptName()}: no SOURCE_REPO_ROOT and no install stamp. ` +
@@ -205,7 +266,7 @@ async function resolveInstallScript({ installStamp, sourceRepoRoot, hermesHome, 
     line: `[bootstrap] fetching ${installScriptName()} for ${installStamp.commit.slice(0, 12)} from GitHub`
   })
   try {
-    await _download(installStamp.commit, cached)
+    await _download(installStamp.commit, cached, installStamp.repoUrl)
     emit({ type: 'log', line: `[bootstrap] saved to ${cached}` })
     return { path: cached, source: 'download', commit: installStamp.commit, kind: installScriptKind() }
   } catch (err) {
@@ -443,6 +504,16 @@ function buildPinArgs(installStamp) {
   if (installStamp && installStamp.branch) {
     args.push('-Branch', installStamp.branch)
   }
+  if (installStamp && installStamp.repoUrl) {
+    const repoUrlHttps = normalizeRepoUrl(installStamp.repoUrl)
+    if (repoUrlHttps) {
+      args.push('-RepoUrlHttps', repoUrlHttps, '-RepoUrlSsh', httpsToSshRepoUrl(repoUrlHttps))
+    }
+  }
+  const bundledSource = resolveBundledAgentSourceArchive()
+  if (bundledSource) {
+    args.push('-BundledSourceArchive', bundledSource)
+  }
   return args
 }
 
@@ -453,6 +524,12 @@ function buildPosixPinArgs({ installStamp, activeRoot, hermesHome }) {
   }
   if (installStamp && installStamp.commit) {
     args.push('--commit', installStamp.commit)
+  }
+  if (installStamp && installStamp.repoUrl) {
+    const repoUrlHttps = normalizeRepoUrl(installStamp.repoUrl)
+    if (repoUrlHttps) {
+      args.push('--repo-url-https', repoUrlHttps, '--repo-url-ssh', httpsToSshRepoUrl(repoUrlHttps))
+    }
   }
   return args
 }

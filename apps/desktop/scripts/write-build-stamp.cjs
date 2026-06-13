@@ -11,6 +11,7 @@
  *     "schemaVersion": 1,
  *     "commit":        "<40-char SHA>",
  *     "branch":        "<branch name>",
+ *     "repoUrl":       "<git remote origin HTTPS URL>",
  *     "builtAt":       "<ISO 8601 UTC timestamp>",
  *     "dirty":         true|false,
  *     "source":        "ci" | "local"
@@ -36,6 +37,18 @@ const DESKTOP_ROOT = path.resolve(__dirname, "..")
 const REPO_ROOT = path.resolve(DESKTOP_ROOT, "..", "..")
 const OUT_DIR = path.join(DESKTOP_ROOT, "build")
 const OUT_FILE = path.join(OUT_DIR, "install-stamp.json")
+const INSTALLER_DIR = path.join(OUT_DIR, "installer")
+const INSTALLER_SCRIPTS = ["install.ps1", "install.sh"]
+
+function normalizeRepoUrl(raw) {
+  if (!raw) return null
+  let url = String(raw).trim()
+  if (!url) return null
+  const ssh = url.match(/^git@github\.com:(.+?)(?:\.git)?$/i)
+  if (ssh) url = `https://github.com/${ssh[1]}`
+  if (!url.endsWith(".git") && /github\.com/i.test(url)) url = `${url}.git`
+  return url
+}
 
 function tryExec(cmd, opts) {
   try {
@@ -49,9 +62,11 @@ function fromCI() {
   const sha = process.env.GITHUB_SHA
   if (!sha) return null
   const branch = process.env.GITHUB_REF_NAME || process.env.GITHUB_HEAD_REF || null
+  const repoUrl = normalizeRepoUrl(process.env.GITHUB_REPOSITORY ? `https://github.com/${process.env.GITHUB_REPOSITORY}.git` : null)
   return {
     commit: sha,
     branch: branch,
+    repoUrl: repoUrl,
     dirty: false, // CI builds from a checkout-of-ref by definition
     source: "ci"
   }
@@ -61,6 +76,8 @@ function fromLocalGit() {
   const sha = tryExec("git rev-parse HEAD", { cwd: REPO_ROOT })
   if (!sha) return null
   const branch = tryExec("git rev-parse --abbrev-ref HEAD", { cwd: REPO_ROOT })
+  const remote = tryExec("git remote get-url origin", { cwd: REPO_ROOT })
+  const repoUrl = normalizeRepoUrl(remote)
   // `git status --porcelain -uno` is empty iff tracked files match HEAD.
   // We exclude untracked files (-uno) intentionally: a developer who's
   // checked out an installer scratch dir alongside the repo shouldn't
@@ -72,9 +89,36 @@ function fromLocalGit() {
   return {
     commit: sha,
     branch: branch === "HEAD" ? null : branch, // detached HEAD -> null
+    repoUrl: repoUrl,
     dirty: dirty,
     source: "local"
   }
+}
+
+function stageInstallerScripts() {
+  fs.mkdirSync(INSTALLER_DIR, { recursive: true })
+  for (const name of INSTALLER_SCRIPTS) {
+    const src = path.join(REPO_ROOT, "scripts", name)
+    const dest = path.join(INSTALLER_DIR, name)
+    if (!fs.existsSync(src)) {
+      throw new Error(`missing installer script: ${src}`)
+    }
+    fs.copyFileSync(src, dest)
+  }
+  console.log(
+    "[write-build-stamp] staged " +
+      INSTALLER_SCRIPTS.map(name => path.relative(REPO_ROOT, path.join(INSTALLER_DIR, name))).join(", ")
+  )
+}
+
+function stageAgentSourceArchive(commit) {
+  const archivePath = path.join(OUT_DIR, "agent-source.zip")
+  execSync(`git archive --format=zip -o "${archivePath}" ${commit}`, {
+    cwd: REPO_ROOT,
+    stdio: "inherit"
+  })
+  const sizeMb = (fs.statSync(archivePath).size / (1024 * 1024)).toFixed(1)
+  console.log(`[write-build-stamp] staged agent source archive (${sizeMb} MB)`)
 }
 
 function main() {
@@ -106,12 +150,15 @@ function main() {
     schemaVersion: STAMP_SCHEMA_VERSION,
     commit: stamp.commit,
     branch: stamp.branch,
+    repoUrl: stamp.repoUrl || null,
     builtAt: new Date().toISOString(),
     dirty: stamp.dirty,
     source: stamp.source
   }
 
   fs.mkdirSync(OUT_DIR, { recursive: true })
+  stageInstallerScripts()
+  stageAgentSourceArchive(stamp.commit)
   fs.writeFileSync(OUT_FILE, JSON.stringify(payload, null, 2) + "\n", "utf8")
   console.log(
     "[write-build-stamp] wrote " +

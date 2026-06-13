@@ -43,8 +43,8 @@ NC='\033[0m' # No Color
 BOLD='\033[1m'
 
 # Configuration
-REPO_URL_SSH="git@github.com:NousResearch/hermes-agent.git"
-REPO_URL_HTTPS="https://github.com/NousResearch/hermes-agent.git"
+REPO_URL_SSH="${REPO_URL_SSH:-git@github.com:NousResearch/hermes-agent.git}"
+REPO_URL_HTTPS="${REPO_URL_HTTPS:-https://github.com/NousResearch/hermes-agent.git}"
 HERMES_HOME="${HERMES_HOME:-$HOME/.hermes}"
 # INSTALL_DIR is resolved AFTER arg parsing and OS detection so we can pick an
 # FHS-style layout for root installs.  Track whether the user gave us an
@@ -115,6 +115,14 @@ while [[ $# -gt 0 ]]; do
             ;;
         --commit|-Commit)
             INSTALL_COMMIT="$2"
+            shift 2
+            ;;
+        --repo-url-https|-RepoUrlHttps)
+            REPO_URL_HTTPS="$2"
+            shift 2
+            ;;
+        --repo-url-ssh|-RepoUrlSsh)
+            REPO_URL_SSH="$2"
             shift 2
             ;;
         --manifest|-Manifest)

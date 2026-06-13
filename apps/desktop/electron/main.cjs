@@ -138,7 +138,7 @@ const SOURCE_REPO_ROOT = path.resolve(APP_ROOT, '../..')
 // build hasn't been invoked, or schema mismatch). Callers must handle null.
 //
 // Schema:
-//   { schemaVersion: 1, commit, branch, builtAt, dirty, source }
+//   { schemaVersion: 1, commit, branch, repoUrl, builtAt, dirty, source }
 const INSTALL_STAMP_SCHEMA_VERSION = 1
 function loadInstallStamp() {
   // Try packaged location first (resources/install-stamp.json), then the
@@ -164,6 +164,7 @@ function loadInstallStamp() {
           schemaVersion: parsed.schemaVersion,
           commit: parsed.commit,
           branch: parsed.branch || null,
+          repoUrl: parsed.repoUrl || null,
           builtAt: parsed.builtAt || null,
           dirty: Boolean(parsed.dirty),
           source: parsed.source || null,
@@ -304,6 +305,12 @@ const WINDOW_BUTTON_POSITION = {
 // non-macOS platforms.
 const NATIVE_OVERLAY_BUTTON_WIDTH = 144
 const APP_ICON_PATHS = [
+  ...(process.platform === 'win32'
+    ? [
+        path.join(process.resourcesPath, 'icon.ico'),
+        path.join(APP_ROOT, 'assets', 'icon.ico')
+      ]
+    : []),
   path.join(APP_ROOT, 'public', 'apple-touch-icon.png'),
   path.join(APP_ROOT, 'dist', 'apple-touch-icon.png'),
   path.join(unpackedPathFor(APP_ROOT), 'dist', 'apple-touch-icon.png')

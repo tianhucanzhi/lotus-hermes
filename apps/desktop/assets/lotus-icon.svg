@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
+  <defs>
+    <linearGradient id="lotus-bg" x1="0" x2="120" y1="0" y2="120">
+      <stop offset="0%" stop-color="#f0f9ff" />
+      <stop offset="100%" stop-color="#dbeafe" />
+    </linearGradient>
+    <linearGradient id="lotus-petal-outer" x1="20" x2="100" y1="20" y2="100">
+      <stop offset="0%" stop-color="#60a5fa" />
+      <stop offset="45%" stop-color="#3b82f6" />
+      <stop offset="100%" stop-color="#1d4ed8" />
+    </linearGradient>
+    <linearGradient id="lotus-petal-inner" x1="30" x2="90" y1="35" y2="85">
+      <stop offset="0%" stop-color="#93c5fd" />
+      <stop offset="100%" stop-color="#2563eb" />
+    </linearGradient>
+    <radialGradient id="lotus-core" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#e0f2fe" />
+      <stop offset="55%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#1d4ed8" />
+    </radialGradient>
+    <filter id="lotus-glow" height="140%" width="140%" x="-20%" y="-20%">
+      <feGaussianBlur result="blur" stdDeviation="2" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+  <rect fill="url(#lotus-bg)" height="120" rx="24" width="120" />
+  <g opacity="0.92">
+    <ellipse cx="60" cy="78" fill="url(#lotus-petal-outer)" rx="11" ry="24" transform="rotate(0 60 60)" />
+    <ellipse cx="60" cy="78" fill="url(#lotus-petal-outer)" rx="11" ry="24" transform="rotate(45 60 60)" />
+    <ellipse cx="60" cy="78" fill="url(#lotus-petal-outer)" rx="11" ry="24" transform="rotate(90 60 60)" />
+    <ellipse cx="60" cy="78" fill="url(#lotus-petal-outer)" rx="11" ry="24" transform="rotate(135 60 60)" />
+    <ellipse cx="60" cy="78" fill="url(#lotus-petal-outer)" rx="11" ry="24" transform="rotate(180 60 60)" />
+    <ellipse cx="60" cy="78" fill="url(#lotus-petal-outer)" rx="11" ry="24" transform="rotate(225 60 60)" />
+    <ellipse cx="60" cy="78" fill="url(#lotus-petal-outer)" rx="11" ry="24" transform="rotate(270 60 60)" />
+    <ellipse cx="60" cy="78" fill="url(#lotus-petal-outer)" rx="11" ry="24" transform="rotate(315 60 60)" />
+  </g>
+  <g opacity="0.98">
+    <ellipse cx="60" cy="72" fill="url(#lotus-petal-inner)" rx="7" ry="16" transform="rotate(22.5 60 60)" />
+    <ellipse cx="60" cy="72" fill="url(#lotus-petal-inner)" rx="7" ry="16" transform="rotate(67.5 60 60)" />
+    <ellipse cx="60" cy="72" fill="url(#lotus-petal-inner)" rx="7" ry="16" transform="rotate(112.5 60 60)" />
+    <ellipse cx="60" cy="72" fill="url(#lotus-petal-inner)" rx="7" ry="16" transform="rotate(157.5 60 60)" />
+    <ellipse cx="60" cy="72" fill="url(#lotus-petal-inner)" rx="7" ry="16" transform="rotate(202.5 60 60)" />
+    <ellipse cx="60" cy="72" fill="url(#lotus-petal-inner)" rx="7" ry="16" transform="rotate(247.5 60 60)" />
+    <ellipse cx="60" cy="72" fill="url(#lotus-petal-inner)" rx="7" ry="16" transform="rotate(292.5 60 60)" />
+    <ellipse cx="60" cy="72" fill="url(#lotus-petal-inner)" rx="7" ry="16" transform="rotate(337.5 60 60)" />
+  </g>
+  <g filter="url(#lotus-glow)">
+    <circle cx="60" cy="58" fill="url(#lotus-core)" r="11" />
+    <circle cx="60" cy="58" fill="#f0f9ff" opacity="0.55" r="5" />
+    <path d="M60 52 L60 64 M54 58 L66 58 M56 54 L64 62 M64 54 L56 62" stroke="#1e3a8a" stroke-linecap="round" stroke-width="1.25" />
+    <circle cx="60" cy="58" fill="#1e40af" r="2" />
+  </g>
+  <path d="M60 34 C54 40 54 48 60 52 C66 48 66 40 60 34Z" fill="#7dd3fc" opacity="0.85" />
+</svg>
