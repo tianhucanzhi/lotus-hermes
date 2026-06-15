@@ -1492,6 +1492,16 @@ export const ja = defineLocale({
     recommended: '推奨',
     connected: '接続済み',
     featuredPitch: '1 つのサブスクリプションで 300 以上の最先端モデル — Hermes を実行するための推奨方法',
+    featuredCustom: {
+      title: 'カスタムエンドポイント',
+      pitch: 'Real API に接続 — 登録して API キーを取得し、すぐにチャットを開始。',
+      providerName: 'Real API',
+      register: '登録して API キーを取得',
+      registerHint: '初めての方は Real API でアカウントを作成し、API キーをコピーしてください。',
+      baseUrlLabel: 'API ベース URL',
+      apiKeyLabel: 'API キー',
+      apiKeyHint: 'Real API アカウントの API キーを貼り付けてください。'
+    },
     openRouterPitch: '1 つのキーで数百のモデル — 堅実なデフォルト',
     apiKeyOptions: {
       openrouter: {

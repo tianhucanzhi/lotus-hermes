@@ -54,11 +54,11 @@ afterEach(() => {
 })
 
 describe('onboarding Picker', () => {
-  it('features Nous Portal and hides other providers behind a disclosure', () => {
+  it('features Custom Endpoints and hides other providers behind a disclosure', () => {
     setProviders([provider('anthropic', 'Anthropic Claude'), provider('nous', 'Nous Portal')])
     render(<Picker ctx={ctx} />)
 
-    expect(screen.getByText('Nous Portal')).toBeTruthy()
+    expect(screen.getByText('Custom Endpoints')).toBeTruthy()
     expect(screen.getByText('Recommended')).toBeTruthy()
     expect(screen.queryByText('Anthropic API Key')).toBeNull()
 
@@ -68,14 +68,24 @@ describe('onboarding Picker', () => {
     expect(screen.getByRole('button', { name: 'Collapse' })).toBeTruthy()
   })
 
-  it('shows every provider directly when Nous Portal is absent', () => {
-    setProviders([provider('anthropic', 'Anthropic Claude'), provider('openai-codex', 'OpenAI Codex / ChatGPT')])
+  it('shows every provider directly when OAuth list is empty', () => {
+    setProviders([])
     render(<Picker ctx={ctx} />)
 
-    expect(screen.getByText('Anthropic API Key')).toBeTruthy()
-    expect(screen.getByText('OpenAI OAuth (ChatGPT)')).toBeTruthy()
-    expect(screen.queryByText('Other sign-in options')).toBeNull()
-    expect(screen.queryByText('Recommended')).toBeNull()
+    expect(screen.getByText('Custom Endpoints')).toBeTruthy()
+    expect(screen.queryByText('Other providers')).toBeNull()
+  })
+
+  it('opens featured custom endpoint form with default Real API URL', () => {
+    setProviders([provider('nous', 'Nous Portal')])
+    render(<Picker ctx={ctx} />)
+
+    fireEvent.click(screen.getByText('Custom Endpoints'))
+
+    const urlInput = screen.getByDisplayValue('https://real-api.yunfm.cn/v1')
+
+    expect(urlInput).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Register & get API key' })).toBeTruthy()
   })
 
   it('offers "choose later" on first run and persists the skip', () => {

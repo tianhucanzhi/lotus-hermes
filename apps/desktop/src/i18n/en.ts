@@ -1371,6 +1371,16 @@ export const en: Translations = {
     recommended: 'Recommended',
     connected: 'Connected',
     featuredPitch: 'One subscription, 300+ frontier models — the recommended way to run Lotus',
+    featuredCustom: {
+      title: 'Custom Endpoints',
+      pitch: 'Connect to Real API — register for a key and start chatting with frontier models.',
+      providerName: 'Real API',
+      register: 'Register & get API key',
+      registerHint: 'New here? Open Real API to create an account and copy your API key.',
+      baseUrlLabel: 'API base URL',
+      apiKeyLabel: 'API key',
+      apiKeyHint: 'Paste the API key from your Real API account.'
+    },
     openRouterPitch: 'One key, hundreds of models — a solid default',
     apiKeyOptions: {
       openrouter: {

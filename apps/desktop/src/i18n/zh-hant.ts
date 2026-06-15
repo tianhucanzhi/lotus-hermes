@@ -1457,6 +1457,16 @@ export const zhHant = defineLocale({
     recommended: '建議',
     connected: '已連線',
     featuredPitch: '一個訂閱，300+ 前沿模型 — 執行 Hermes 的建議方式',
+    featuredCustom: {
+      title: '自訂端點',
+      pitch: '連接 Real API 閘道 — 註冊取得金鑰即可使用前沿模型，建議首選。',
+      providerName: 'Real API',
+      register: '註冊並取得金鑰',
+      registerHint: '還沒有帳號？開啟 Real API 註冊，複製 API 金鑰後貼到下方。',
+      baseUrlLabel: 'API 位址',
+      apiKeyLabel: 'API 金鑰',
+      apiKeyHint: '貼上你在 Real API 取得的 API 金鑰。'
+    },
     openRouterPitch: '一個金鑰，數百個模型 — 穩定的預設選擇',
     apiKeyOptions: {
       openrouter: { short: '一個金鑰，多個模型', description: '用一個金鑰存取數百個模型。適合新安裝的預設選擇。' },

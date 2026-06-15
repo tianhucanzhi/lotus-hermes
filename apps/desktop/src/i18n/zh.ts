@@ -1556,6 +1556,16 @@ export const zh: Translations = {
     recommended: '推荐',
     connected: '已连接',
     featuredPitch: '一个订阅，300+ 前沿模型 — 运行 Lotus 的推荐方式',
+    featuredCustom: {
+      title: '自定义端点',
+      pitch: '连接 Real API 网关 — 注册获取密钥即可使用前沿模型，推荐首选。',
+      providerName: 'Real API',
+      register: '注册并获取密钥',
+      registerHint: '还没有账号？打开 Real API 注册，复制 API 密钥后粘贴到下方。',
+      baseUrlLabel: 'API 地址',
+      apiKeyLabel: 'API 密钥',
+      apiKeyHint: '粘贴你在 Real API 获取的 API 密钥。'
+    },
     openRouterPitch: '一个密钥，数百个模型 — 稳妥的默认选择',
     apiKeyOptions: {
       openrouter: { short: '一个密钥，多个模型', description: '用一个密钥访问数百个模型。适合新安装的默认选择。' },

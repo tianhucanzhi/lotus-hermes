@@ -1057,6 +1057,16 @@ export interface Translations {
     recommended: string
     connected: string
     featuredPitch: string
+    featuredCustom: {
+      apiKeyHint: string
+      apiKeyLabel: string
+      baseUrlLabel: string
+      pitch: string
+      providerName: string
+      register: string
+      registerHint: string
+      title: string
+    }
     openRouterPitch: string
     apiKeyOptions: Record<string, { short: string; description: string }>
     backToSignIn: string

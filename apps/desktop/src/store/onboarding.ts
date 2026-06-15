@@ -3,9 +3,11 @@ import { atom } from 'nanostores'
 import {
   cancelOAuthSession,
   getGlobalModelOptions,
+  getHermesConfigRecord,
   getRecommendedDefaultModel,
   listOAuthProviders,
   pollOAuthSession,
+  saveHermesConfig,
   setEnvVar,
   setModelAssignment,
   startOAuthLogin,
@@ -20,7 +22,7 @@ type PkceStart = Extract<OAuthStartResponse, { flow: 'pkce' }>
 type DeviceStart = Extract<OAuthStartResponse, { flow: 'device_code' }>
 type LoopbackStart = Extract<OAuthStartResponse, { flow: 'loopback' }>
 
-export type OnboardingMode = 'apikey' | 'oauth'
+export type OnboardingMode = 'apikey' | 'featured_custom' | 'oauth'
 
 export type OnboardingFlow =
   | { status: 'idle' }
@@ -400,6 +402,17 @@ export function startManualOnboarding(reason: null | string = DEFAULT_MANUAL_ONB
   void refreshProviders()
 }
 
+export function startManualFeaturedCustomOnboarding() {
+  patch({
+    manual: true,
+    requested: true,
+    reason: null,
+    mode: 'featured_custom',
+    flow: { status: 'idle' }
+  })
+  void refreshProviders()
+}
+
 // One-shot hand-off used when the dedicated Providers settings page launches a
 // specific provider's sign-in: we open the manual onboarding overlay AND
 // remember which provider to start, so the overlay drives that exact OAuth
@@ -466,6 +479,19 @@ export function dismissFirstRunOnboarding() {
 
 export function setOnboardingMode(mode: OnboardingMode) {
   patch({ mode })
+}
+
+function customProviderSlug(name: string): string {
+  let display = name.trim()
+
+  for (const sep of ['—', ' - ']) {
+    if (display.includes(sep)) {
+      display = display.split(sep)[0].trim()
+      break
+    }
+  }
+
+  return `custom:${(display || name).trim().toLowerCase().replace(/\s+/g, '-')}`
 }
 
 export async function refreshOnboarding(ctx: OnboardingContext) {
@@ -754,6 +780,81 @@ export async function saveOnboardingApiKey(envKey: string, value: string, label:
 // re-assigns the model from /api/model/options WITHOUT a base_url, which would
 // wipe the base_url we just wrote. We have a concrete model already, so we
 // verify the runtime directly and finish.
+// Featured onboarding path: Real API / custom OpenAI-compatible gateway with
+// base URL + API key saved to custom_providers and set as the main model.
+export async function saveOnboardingFeaturedCustomEndpoint(
+  baseUrl: string,
+  apiKey: string,
+  displayName: string,
+  ctx: OnboardingContext
+) {
+  const url = baseUrl.trim().replace(/\/+$/, '')
+  const key = apiKey.trim()
+  const label = displayName.trim() || 'Custom Endpoint'
+
+  if (!url) {
+    return { ok: false, message: 'Enter the endpoint URL first.' }
+  }
+
+  if (!key) {
+    return { ok: false, message: 'Enter your API key first.' }
+  }
+
+  let model = ''
+
+  try {
+    const probe = await validateProviderCredential('OPENAI_BASE_URL', url)
+
+    if (!probe.reachable) {
+      return { ok: false, message: probe.message || `Could not reach ${url}.` }
+    }
+
+    model = (probe.models?.[0] ?? '').trim()
+  } catch {
+    return { ok: false, message: `Could not reach ${url}.` }
+  }
+
+  if (!model) {
+    return {
+      ok: false,
+      message: `Connected to ${url}, but it advertised no models at /v1/models.`
+    }
+  }
+
+  const slug = customProviderSlug(label)
+
+  try {
+    const config = await getHermesConfigRecord()
+    const existing = Array.isArray(config.custom_providers) ? config.custom_providers : []
+    const entry: Record<string, string> = { name: label, base_url: url, api_key: key, model }
+    const nextProviders = [
+      ...existing.filter(raw => {
+        if (!raw || typeof raw !== 'object') {
+          return false
+        }
+
+        const record = raw as Record<string, unknown>
+        const existingUrl = String(record.base_url ?? record.url ?? '').trim().replace(/\/+$/, '')
+
+        return existingUrl !== url
+      }),
+      entry
+    ]
+
+    await saveHermesConfig({ ...config, custom_providers: nextProviders })
+    await setModelAssignment({ scope: 'main', provider: slug, model, base_url: url })
+    await ctx.requestGateway('reload.env').catch(() => undefined)
+
+    await completeWithModelConfirm(ctx, label, [slug, 'custom'], () => undefined, true)
+
+    return { ok: true }
+  } catch (error) {
+    notifyError(error, `Could not save ${label}`)
+
+    return { ok: false, message: errMessage(error) }
+  }
+}
+
 export async function saveOnboardingLocalEndpoint(baseUrl: string, ctx: OnboardingContext) {
   const url = baseUrl.trim()
 

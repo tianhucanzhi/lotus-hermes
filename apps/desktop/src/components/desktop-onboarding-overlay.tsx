@@ -16,6 +16,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ExternalLink,
+  Globe,
   KeyRound,
   Loader2,
   Terminal
@@ -40,6 +41,7 @@ import {
   recheckExternalSignin,
   refreshOnboarding,
   saveOnboardingApiKey,
+  saveOnboardingFeaturedCustomEndpoint,
   setOnboardingCode,
   setOnboardingMode,
   setOnboardingModel,
@@ -407,7 +409,8 @@ function Header() {
   )
 }
 
-export const FEATURED_ID = 'nous'
+export const FEATURED_CUSTOM_ENDPOINT_URL = 'https://real-api.yunfm.cn/v1'
+export const FEATURED_CUSTOM_ENDPOINT_REGISTER_URL = 'https://real-api.yunfm.cn'
 const SHOW_ALL_KEY = 'hermes-onboarding-show-all-v1'
 
 const readShowAll = () => {
@@ -436,11 +439,28 @@ export function Picker({ ctx }: { ctx: OnboardingContext }) {
   const hasOauth = ordered.length > 0
   const apiKeyOptions = useApiKeyCatalog()
 
-  if (mode === 'apikey' || !hasOauth) {
+  if (mode === 'featured_custom') {
+    return (
+      <div className="grid gap-3">
+        <FeaturedCustomEndpointForm
+          canGoBack={hasOauth}
+          ctx={ctx}
+          onBack={() => setOnboardingMode('oauth')}
+        />
+        {manual ? null : (
+          <div className="flex justify-center border-t border-(--ui-stroke-tertiary) pt-3">
+            <ChooseLaterLink />
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  if (mode === 'apikey') {
     return (
       <div className="grid gap-3">
         <ApiKeyForm
-          canGoBack={hasOauth}
+          canGoBack
           onBack={() => setOnboardingMode('oauth')}
           onSave={(envKey, value, name) => saveOnboardingApiKey(envKey, value, name, ctx)}
           options={apiKeyOptions}
@@ -455,24 +475,25 @@ export function Picker({ ctx }: { ctx: OnboardingContext }) {
   }
 
   if (providers === null) {
-    return <Status>{t.onboarding.lookingUpProviders}</Status>
+    return (
+      <div className="grid gap-2">
+        <FeaturedCustomEndpointRow onSelect={() => setOnboardingMode('featured_custom')} />
+        <Status>{t.onboarding.lookingUpProviders}</Status>
+      </div>
+    )
   }
 
   const select = (p: OAuthProvider) => void startProviderOAuth(p, ctx)
-  const featured = ordered.find(p => p.id === FEATURED_ID) ?? null
-  const rest = featured ? ordered.filter(p => p.id !== FEATURED_ID) : ordered
-  // Collapse the secondary providers behind a disclosure only when Nous
-  // Portal is present to anchor the choice — otherwise show the full list.
-  const collapsible = Boolean(featured) && rest.length > 0
+  const collapsible = hasOauth
   const showRest = !collapsible || showAll
 
   return (
     <div className="grid gap-2">
       <div className="grid max-h-[60dvh] gap-2 overflow-y-auto p-1">
-        {featured ? <FeaturedProviderRow onSelect={select} provider={featured} /> : null}
+        <FeaturedCustomEndpointRow onSelect={() => setOnboardingMode('featured_custom')} />
         {showRest ? (
           <>
-            {rest.map(p => (
+            {ordered.map(p => (
               <ProviderRow key={p.id} onSelect={select} provider={p} />
             ))}
             <KeyProviderRow onClick={() => setOnboardingMode('apikey')} />
@@ -526,6 +547,124 @@ function ChooseLaterLink() {
     >
       {t.onboarding.chooseLater}
     </Button>
+  )
+}
+
+export function FeaturedCustomEndpointRow({ onSelect }: { onSelect: () => void }) {
+  const { t } = useI18n()
+
+  return (
+    <button
+      className="group relative flex w-full items-center justify-between gap-4 rounded-[8px] bg-primary/[0.06] px-3 py-2.5 text-left transition-colors hover:bg-primary/10"
+      onClick={onSelect}
+      type="button"
+    >
+      <span aria-hidden className="arc-border arc-reverse arc-nous" />
+      <div className="min-w-0">
+        <div className="flex items-center gap-2">
+          <Globe className="size-5 shrink-0 text-primary" />
+          <span className="text-[length:var(--conversation-text-font-size)] font-semibold">
+            {t.onboarding.featuredCustom.title}
+          </span>
+          <span className="inline-flex items-center gap-1.5 bg-primary px-2 py-0.5 text-[0.64rem] font-semibold uppercase tracking-[0.16em] text-primary-foreground">
+            <span aria-hidden="true" className="dither inline-block size-2 shrink-0" />
+            {t.onboarding.recommended}
+          </span>
+        </div>
+        <p className="mt-1 text-xs leading-5 text-muted-foreground">{t.onboarding.featuredCustom.pitch}</p>
+      </div>
+      <ChevronRight className="size-4 shrink-0 text-primary transition group-hover:translate-x-0.5" />
+    </button>
+  )
+}
+
+function FeaturedCustomEndpointForm({
+  canGoBack,
+  ctx,
+  onBack
+}: {
+  canGoBack: boolean
+  ctx: OnboardingContext
+  onBack: () => void
+}) {
+  const { t } = useI18n()
+  const fc = t.onboarding.featuredCustom
+  const [baseUrl, setBaseUrl] = useState(FEATURED_CUSTOM_ENDPOINT_URL)
+  const [apiKey, setApiKey] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<null | string>(null)
+  const canSave = baseUrl.trim().length > 0 && apiKey.trim().length > 0
+
+  const submit = async () => {
+    if (!canSave || saving) {
+      return
+    }
+
+    setSaving(true)
+    setError(null)
+    const result = await saveOnboardingFeaturedCustomEndpoint(baseUrl, apiKey, fc.providerName, ctx)
+
+    if (!result.ok) {
+      setError(result.message ?? t.onboarding.couldNotSave)
+    }
+
+    setSaving(false)
+  }
+
+  return (
+    <div className="grid gap-4">
+      {canGoBack ? (
+        <Button
+          className="-mt-1 self-start font-medium"
+          onClick={onBack}
+          size="xs"
+          type="button"
+          variant="text"
+        >
+          <ChevronLeft className="size-3" />
+          {t.onboarding.backToSignIn}
+        </Button>
+      ) : null}
+
+      <div className="rounded-2xl border border-primary/20 bg-primary/[0.04] px-4 py-3">
+        <p className="text-sm leading-6 text-muted-foreground">{fc.registerHint}</p>
+        <DocsLink href={FEATURED_CUSTOM_ENDPOINT_REGISTER_URL}>{fc.register}</DocsLink>
+      </div>
+
+      <div className="grid gap-2">
+        <label className="text-sm font-medium">{fc.baseUrlLabel}</label>
+        <Input
+          autoComplete="off"
+          className="font-mono"
+          onChange={e => setBaseUrl(e.target.value)}
+          placeholder={FEATURED_CUSTOM_ENDPOINT_URL}
+          value={baseUrl}
+        />
+      </div>
+
+      <div className="grid gap-2">
+        <label className="text-sm font-medium">{fc.apiKeyLabel}</label>
+        <p className="text-sm leading-6 text-muted-foreground">{fc.apiKeyHint}</p>
+        <Input
+          autoComplete="off"
+          autoFocus
+          className="font-mono"
+          onChange={e => setApiKey(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && void submit()}
+          placeholder={t.onboarding.pasteApiKey}
+          type="password"
+          value={apiKey}
+        />
+        {error ? <p className="text-xs text-destructive">{error}</p> : null}
+      </div>
+
+      <div className="flex justify-end">
+        <Button disabled={!canSave || saving} onClick={() => void submit()}>
+          {saving ? <Loader2 className="animate-spin" /> : <KeyRound />}
+          {saving ? t.onboarding.connecting : t.common.connect}
+        </Button>
+      </div>
+    </div>
   )
 }
 
