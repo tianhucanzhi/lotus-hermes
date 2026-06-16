@@ -64,7 +64,9 @@ param(
     [string]$RepoUrlSsh = "git@github.com:NousResearch/hermes-agent.git",
 
     # Packaged Lotus/Hermes desktop builds ship a git-archive zip of the agent
-    # source so first launch can install offline without GitHub access.
+    # source so first launch (and bootstrap retries) can install offline without
+    # GitHub access.  When set with -NonInteractive, an existing managed checkout
+    # is replaced from the archive instead of git fetch.
     [string]$BundledSourceArchive = ""
 )
 
@@ -1085,6 +1087,30 @@ function Test-InstallRepoValid {
     }
 }
 
+function Initialize-ManagedGitRepo {
+    # git init/config/remote for managed Hermes checkouts (bundled zip or
+    # ZIP-fallback).  PowerShell EAP=Stop wraps native-command stderr --
+    # including git's advisory "hint: Using 'master' as the name for the
+    # initial branch" -- as a terminating NativeCommandError even with
+    # 2>$null.  Relax for the span and check $LASTEXITCODE instead.
+    Push-Location $InstallDir
+    $prevEAP = $ErrorActionPreference
+    $ErrorActionPreference = "SilentlyContinue"
+    try {
+        git -c windows.appendAtomically=false init -b main 2>$null
+        if ($LASTEXITCODE -ne 0) {
+            git -c windows.appendAtomically=false init 2>$null
+        }
+        if ($LASTEXITCODE -ne 0) { throw "git init failed (exit $LASTEXITCODE)" }
+        git -c windows.appendAtomically=false config windows.appendAtomically false 2>$null
+        git -c windows.appendAtomically=false config core.autocrlf false 2>$null
+        git remote add origin $RepoUrlHttps 2>$null
+    } finally {
+        $ErrorActionPreference = $prevEAP
+        Pop-Location
+    }
+}
+
 function Install-FromBundledSource {
     param([Parameter(Mandatory = $true)][string]$ArchivePath)
 
@@ -1097,12 +1123,7 @@ function Install-FromBundledSource {
     Write-Info "Extracting bundled agent source from $ArchivePath ..."
     Expand-Archive -Path $ArchivePath -DestinationPath $InstallDir -Force
 
-    Push-Location $InstallDir
-    git -c windows.appendAtomically=false init 2>$null
-    git -c windows.appendAtomically=false config windows.appendAtomically false 2>$null
-    git -c windows.appendAtomically=false config core.autocrlf false 2>$null
-    git remote add origin $RepoUrlHttps 2>$null
-    Pop-Location
+    Initialize-ManagedGitRepo
     Write-Success "Installed agent from bundled source archive (offline)"
 }
 
@@ -1118,6 +1139,13 @@ function Install-Repository {
             $needsFreshInstall = $true
         } elseif (-not (Test-InstallRepoValid)) {
             Write-Warn "Existing directory at $InstallDir is not a valid git repo -- replacing from bundled source."
+            $needsFreshInstall = $true
+        } elseif ($NonInteractive) {
+            # Desktop bootstrap (first launch or retry after a partial install):
+            # a prior repository stage may have left a valid git checkout that
+            # would otherwise enter the online update path (git fetch).  Re-apply
+            # the .exe's pinned archive instead -- idempotent, offline-safe.
+            Write-Info "Applying bundled agent source (non-interactive install)."
             $needsFreshInstall = $true
         }
         if ($needsFreshInstall) {
@@ -1331,11 +1359,7 @@ function Install-Repository {
                     Write-Success "Downloaded and extracted"
 
                     # Initialize git repo so updates work later
-                    Push-Location $InstallDir
-                    git -c windows.appendAtomically=false init 2>$null
-                    git -c windows.appendAtomically=false config windows.appendAtomically false 2>$null
-                    git remote add origin $RepoUrlHttps 2>$null
-                    Pop-Location
+                    Initialize-ManagedGitRepo
                     Write-Success "Git repo initialized for future updates"
 
                     $cloneSuccess = $true

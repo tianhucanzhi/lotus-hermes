@@ -41,3 +41,5 @@
     # 或只要安装程序：
     npm run dist:win:nsis     # 只要 NSIS 安装包
 
+在新机器上如果已有半安装残留，可以先清掉再装新包：
+    Remove-Item -Recurse -Force "$env:LOCALAPPDATA\hermes\hermes-agent"
