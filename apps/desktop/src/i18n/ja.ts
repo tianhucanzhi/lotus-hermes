@@ -450,7 +450,27 @@ export const ja = defineLocale({
       justNow: 'たった今',
       minAgo: count => `${count} 分前`,
       hoursAgo: count => `${count} 時間前`,
-      daysAgo: count => `${count} 日前`
+      daysAgo: count => `${count} 日前`,
+      activation: {
+        title: 'アクティベーション',
+        loading: 'アクティベーション情報を読み込み中…',
+        currentCode: 'アクティベーションコード',
+        currentCodeDesc: 'このデバイスに紐づいたコード',
+        expiresAt: '有効期限',
+        expiresAtDesc: 'アクティベーションコードの有効期限',
+        expiredDesc: 'コードの有効期限が切れています。新しいコードを入力してください',
+        offline: 'オフラインモード（アクティベーションサーバーに接続できません）',
+        notActivated: '未アクティベート',
+        statusActive: '有効',
+        statusExpired: '期限切れ',
+        statusInactive: '未アクティベート',
+        change: 'コードを変更',
+        changePrompt: '新しいアクティベーションコードを入力して現在のコードを置き換えます',
+        save: '適用',
+        changing: '確認中…',
+        cancel: 'キャンセル',
+        changeSuccess: 'アクティベーションコードを更新しました'
+      }
     },
     config: {
       none: 'なし',

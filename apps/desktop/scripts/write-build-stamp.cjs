@@ -159,6 +159,7 @@ function main() {
   fs.mkdirSync(OUT_DIR, { recursive: true })
   stageInstallerScripts()
   stageAgentSourceArchive(stamp.commit)
+  execSync('node scripts/stage-portable-git.cjs', { cwd: DESKTOP_ROOT, stdio: 'inherit' })
   fs.writeFileSync(OUT_FILE, JSON.stringify(payload, null, 2) + "\n", "utf8")
   console.log(
     "[write-build-stamp] wrote " +

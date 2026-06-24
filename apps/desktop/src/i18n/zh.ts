@@ -522,7 +522,27 @@ export const zh: Translations = {
       justNow: '刚刚',
       minAgo: count => `${count} 分钟前`,
       hoursAgo: count => `${count} 小时前`,
-      daysAgo: count => `${count} 天前`
+      daysAgo: count => `${count} 天前`,
+      activation: {
+        title: '激活',
+        loading: '正在加载激活信息…',
+        currentCode: '当前激活码',
+        currentCodeDesc: '本设备绑定的激活码',
+        expiresAt: '到期时间',
+        expiresAtDesc: '激活码有效期限',
+        expiredDesc: '激活码已过期，请更换新码',
+        offline: '离线模式（未能连接激活服务器）',
+        notActivated: '未激活',
+        statusActive: '已激活',
+        statusExpired: '已过期',
+        statusInactive: '未激活',
+        change: '更换激活码',
+        changePrompt: '输入新的激活码以替换当前激活',
+        save: '确认更换',
+        changing: '正在验证…',
+        cancel: '取消',
+        changeSuccess: '激活码已更新'
+      }
     },
     config: {
       none: '无',

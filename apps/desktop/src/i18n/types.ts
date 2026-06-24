@@ -248,6 +248,26 @@ export interface Translations {
       minAgo: (count: number) => string
       hoursAgo: (count: number) => string
       daysAgo: (count: number) => string
+      activation: {
+        title: string
+        loading: string
+        currentCode: string
+        currentCodeDesc: string
+        expiresAt: string
+        expiresAtDesc: string
+        expiredDesc: string
+        offline: string
+        notActivated: string
+        statusActive: string
+        statusExpired: string
+        statusInactive: string
+        change: string
+        changePrompt: string
+        save: string
+        changing: string
+        cancel: string
+        changeSuccess: string
+      }
     }
     config: {
       none: string

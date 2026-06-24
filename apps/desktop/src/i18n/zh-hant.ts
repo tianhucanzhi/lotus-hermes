@@ -444,7 +444,27 @@ export const zhHant = defineLocale({
       justNow: '剛剛',
       minAgo: count => `${count} 分鐘前`,
       hoursAgo: count => `${count} 小時前`,
-      daysAgo: count => `${count} 天前`
+      daysAgo: count => `${count} 天前`,
+      activation: {
+        title: '啟用',
+        loading: '正在載入啟用資訊…',
+        currentCode: '目前啟用碼',
+        currentCodeDesc: '綁定此裝置的啟用碼',
+        expiresAt: '到期時間',
+        expiresAtDesc: '啟用碼有效期限',
+        expiredDesc: '啟用碼已過期，請更換新碼',
+        offline: '離線模式（無法連線啟用伺服器）',
+        notActivated: '未啟用',
+        statusActive: '已啟用',
+        statusExpired: '已過期',
+        statusInactive: '未啟用',
+        change: '更換啟用碼',
+        changePrompt: '輸入新的啟用碼以替換目前啟用',
+        save: '確認更換',
+        changing: '正在驗證…',
+        cancel: '取消',
+        changeSuccess: '啟用碼已更新'
+      }
     },
     config: {
       none: '無',

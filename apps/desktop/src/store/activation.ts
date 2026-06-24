@@ -5,6 +5,7 @@ import type { DesktopActivationError, DesktopActivationStatus } from '@/global'
 export interface ActivationState {
   loading: boolean
   activated: boolean
+  skipped?: boolean
   code?: string
   expiresAt?: string
   activatedAt?: string
@@ -27,6 +28,7 @@ function applyStatus(status: DesktopActivationStatus | null | undefined): void {
   $activation.set({
     loading: false,
     activated: Boolean(status.activated),
+    skipped: status.skipped,
     code: status.code,
     expiresAt: status.expiresAt,
     activatedAt: status.activatedAt,

@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>养一个懂你的 AI · Lotus 桌面助理</title>
+  <meta name="description" content="桌面端养成系 AI 助理——越用越聪明、长期记忆、定时自动办公、Win 本地部署，数据不出电脑。适合行政、运营、自由职业与小团队。" />
+  <style>
+    :root {
+      --bg: #07070d;
+      --surface: #0f0f18;
+      --surface-2: #14142a;
+      --text: #e8e4dc;
+      --muted: #9a968e;
+      --gold: #ffd700;
+      --gold-dim: #c9a800;
+      --cyan: #22d3ee;
+      --blue: #60a5fa;
+      --green: #34d399;
+      --pink: #f472b6;
+      --border: rgba(255, 215, 0, 0.12);
+      --radius: 14px;
+      --font: "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+      --mono: "Cascadia Code", "JetBrains Mono", Consolas, monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 50% at 50% -10%, rgba(255, 215, 0, 0.08), transparent 55%),
+        radial-gradient(ellipse 60% 40% at 100% 20%, rgba(96, 165, 250, 0.06), transparent 50%),
+        radial-gradient(ellipse 50% 35% at 0% 80%, rgba(52, 211, 153, 0.05), transparent 45%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .wrap {
+      position: relative;
+      z-index: 1;
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 0 1.25rem 4rem;
+    }
+
+    /* ── Nav (sticky) ── */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 200;
+      border-bottom: 1px solid var(--border);
+      background: rgba(7, 7, 13, 0.82);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+    }
+
+    .topbar-inner {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 0 1.25rem;
+      display: flex;
+      align-items: center;
+      min-height: 3.75rem;
+    }
+
+    nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      min-height: 3.75rem;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-weight: 700;
+      font-size: 1.05rem;
+      color: var(--text);
+      text-decoration: none;
+    }
+
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #101828, #0b1220);
+      border: 1px solid rgba(34, 211, 238, 0.35);
+      display: grid;
+      place-items: center;
+      font-size: 1.1rem;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+      flex-wrap: wrap;
+    }
+
+    .nav-links a {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.88rem;
+      transition: color 0.15s, border-color 0.15s, background 0.15s;
+    }
+
+    .nav-links a:hover { color: var(--gold); }
+
+    .nav-links a.nav-highlight {
+      color: #7dd3fc;
+      border: 1px solid rgba(125, 211, 252, 0.35);
+      padding: 0.4rem 0.75rem;
+      border-radius: 999px;
+      background: rgba(56, 189, 248, 0.08);
+      white-space: nowrap;
+    }
+
+    .nav-links a.nav-highlight:hover {
+      color: #bae6fd;
+      border-color: rgba(186, 230, 253, 0.5);
+      background: rgba(56, 189, 248, 0.14);
+    }
+
+    /* ── Hero ── */
+    .hero {
+      text-align: center;
+      padding: 2.5rem 0 3rem;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.35rem 0.9rem;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 215, 0, 0.28);
+      background: rgba(255, 215, 0, 0.06);
+      color: var(--gold);
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      margin-bottom: 1.25rem;
+    }
+
+    h1 {
+      font-size: clamp(2.2rem, 5.5vw, 3.5rem);
+      line-height: 1.12;
+      margin-bottom: 0.85rem;
+      background: linear-gradient(
+        105deg,
+        #b8860b 0%,
+        #ffd700 18%,
+        #fffef5 38%,
+        #ffd700 48%,
+        #ffe566 62%,
+        #fff8dc 78%,
+        #ffd700 88%,
+        #b8860b 100%
+      );
+      background-size: 250% 100%;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: hero-shimmer 4s ease-in-out infinite;
+      filter: drop-shadow(0 0 18px rgba(255, 215, 0, 0.18));
+    }
+
+    @keyframes hero-shimmer {
+      0% {
+        background-position: 100% center;
+      }
+      100% {
+        background-position: -100% center;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      h1 {
+        animation: none;
+        background-size: 100% 100%;
+        background-position: center;
+      }
+    }
+
+    .hero-tags {
+      margin-bottom: 1.1rem;
+      font-size: 0.95rem;
+      color: #c9c5bc;
+      letter-spacing: 0.02em;
+    }
+
+    .lead {
+      max-width: 620px;
+      margin: 0 auto;
+      font-size: 1.02rem;
+      color: var(--muted);
+      line-height: 1.75;
+    }
+
+    .hero-audience {
+      margin-top: 1.1rem;
+      font-size: 0.82rem;
+      color: #7a766e;
+    }
+
+    .hero-audience em {
+      font-style: normal;
+      color: var(--gold-dim);
+    }
+
+    .cta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      justify-content: center;
+      margin-top: 1.75rem;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.7rem 1.35rem;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 0.92rem;
+      text-decoration: none;
+      transition: transform 0.18s, box-shadow 0.18s;
+    }
+
+    .btn:hover { transform: translateY(-2px); }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #ffd700, #e6b800);
+      color: #0f0f18;
+      box-shadow: 0 4px 24px rgba(255, 215, 0, 0.22);
+    }
+
+    .btn-primary:hover {
+      box-shadow: 0 8px 32px rgba(255, 215, 0, 0.32);
+    }
+
+    .btn-ghost {
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: var(--text);
+      background: var(--surface);
+    }
+
+    .btn-ghost:hover {
+      border-color: var(--gold);
+      color: var(--gold);
+    }
+
+    /* ── Stats strip ── */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.75rem;
+      margin-bottom: 3.5rem;
+    }
+
+    @media (max-width: 720px) {
+      .stats { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    .stat {
+      padding: 1rem;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--surface);
+      text-align: center;
+    }
+
+    .stat strong {
+      display: block;
+      font-size: 1.05rem;
+      color: var(--gold);
+      margin-bottom: 0.35rem;
+      line-height: 1.3;
+    }
+
+    .stat .stat-icon {
+      display: block;
+      font-size: 1.35rem;
+      margin-bottom: 0.35rem;
+      line-height: 1;
+    }
+
+    .stat span {
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    /* ── Sections ── */
+    section { margin-bottom: 3.5rem; }
+
+    .section-head {
+      text-align: center;
+      margin-bottom: 1.75rem;
+    }
+
+    .section-head h2 {
+      font-size: clamp(1.35rem, 2.5vw, 1.75rem);
+      margin-bottom: 0.5rem;
+    }
+
+    .section-head p {
+      color: var(--muted);
+      max-width: 560px;
+      margin: 0 auto;
+      font-size: 0.95rem;
+    }
+
+    /* ── Pillars ── */
+    .pillars {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+    }
+
+    @media (max-width: 900px) {
+      .pillars { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 520px) {
+      .pillars { grid-template-columns: 1fr; }
+    }
+
+    .pillar {
+      padding: 1.25rem;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--surface);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .pillar::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--accent, linear-gradient(90deg, #ffd700, #60a5fa));
+    }
+
+    .pillar .icon { font-size: 1.5rem; margin-bottom: 0.6rem; }
+
+    .pillar h3 {
+      font-size: 1rem;
+      margin-bottom: 0.45rem;
+    }
+
+    .pillar p {
+      font-size: 0.86rem;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    /* ── Scenarios ── */
+    .scenarios {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+    }
+
+    @media (max-width: 860px) {
+      .scenarios { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 560px) {
+      .scenarios { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      padding: 1.2rem;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--surface);
+      transition: transform 0.2s, border-color 0.2s;
+    }
+
+    .card:hover {
+      transform: translateY(-3px);
+      border-color: rgba(255, 215, 0, 0.35);
+    }
+
+    .tag {
+      display: inline-block;
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-bottom: 0.55rem;
+    }
+
+    .card h3 {
+      font-size: 0.98rem;
+      margin-bottom: 0.45rem;
+      line-height: 1.35;
+    }
+
+    .card .problem {
+      font-size: 0.84rem;
+      color: var(--muted);
+      margin-bottom: 0.65rem;
+      line-height: 1.55;
+    }
+
+    .card ul {
+      padding-left: 1.1rem;
+      font-size: 0.8rem;
+      color: #b8b4ac;
+    }
+
+    .card li { margin-bottom: 0.25rem; }
+
+    /* ── Steps ── */
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+    }
+
+    @media (max-width: 720px) {
+      .steps { grid-template-columns: 1fr; }
+    }
+
+    .step {
+      padding: 1.25rem;
+      border-radius: var(--radius);
+      border: 1px dashed rgba(255, 215, 0, 0.22);
+      background: rgba(255, 215, 0, 0.03);
+    }
+
+    .step-num {
+      display: inline-flex;
+      width: 1.75rem;
+      height: 1.75rem;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      background: var(--gold);
+      color: #0f0f18;
+      font-size: 0.82rem;
+      font-weight: 700;
+      margin-bottom: 0.65rem;
+    }
+
+    .step h3 { font-size: 0.95rem; margin-bottom: 0.4rem; }
+
+    .step p {
+      font-size: 0.86rem;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    .step a {
+      color: #7dd3fc;
+      text-decoration: none;
+      border-bottom: 1px solid rgba(125, 211, 252, 0.35);
+    }
+
+    .step a:hover {
+      color: #bae6fd;
+      border-bottom-color: rgba(186, 230, 253, 0.6);
+    }
+
+    /* ── Compare ── */
+    .compare {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    @media (max-width: 640px) {
+      .compare { grid-template-columns: 1fr; }
+    }
+
+    .compare-box {
+      padding: 1.25rem;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    .compare-box.highlight {
+      border-color: rgba(255, 215, 0, 0.35);
+      background: rgba(255, 215, 0, 0.04);
+    }
+
+    .compare-box.weak { opacity: 0.75; }
+
+    .compare-box h3 {
+      font-size: 0.95rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .compare-box ul {
+      padding-left: 1.1rem;
+      font-size: 0.86rem;
+      color: var(--muted);
+    }
+
+    .compare-box li { margin-bottom: 0.4rem; }
+
+    /* ── Closing ── */
+    .closing {
+      text-align: center;
+      padding: 2.25rem 1.5rem;
+      border-radius: 18px;
+      border: 1px solid rgba(255, 215, 0, 0.22);
+      background: linear-gradient(160deg, rgba(255, 215, 0, 0.08), rgba(96, 165, 250, 0.06));
+      margin-top: 1rem;
+    }
+
+    .closing h2 {
+      font-size: clamp(1.25rem, 2.5vw, 1.65rem);
+      margin-bottom: 0.65rem;
+    }
+
+    .closing p {
+      max-width: 520px;
+      margin: 0 auto 1.25rem;
+      color: var(--muted);
+      line-height: 1.65;
+    }
+
+    footer {
+      text-align: center;
+      padding-top: 2rem;
+      font-size: 0.78rem;
+      color: #666;
+    }
+
+    footer a { color: var(--gold-dim); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <nav>
+        <a class="logo" href="#">
+          <span class="logo-icon">🪷</span>
+          Hermes · Lotus
+        </a>
+        <div class="nav-links">
+          <a href="#value">核心价值</a>
+          <a href="#scenarios">使用场景</a>
+          <a href="#start">快速开始</a>
+          <a class="nav-highlight" href="https://real-api.yunfm.cn/" target="_blank" rel="noopener noreferrer">Real-API · 聚合全球顶级 AI 能力</a>
+          <a href="https://hermes-agent.nousresearch.com/docs/getting-started/quickstart">文档</a>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <header class="hero">
+      <div class="badge">桌面端养成系 AI 助理</div>
+      <h1>养一个，懂你的 AI</h1>
+      <p class="hero-tags">越用越聪明 · 永不健忘 · 自动帮你干活</p>
+      <p class="lead">
+        （Lotus 桌面版）运行在你的电脑上，调用真实工具——终端、浏览器、文件、API——
+        并在命令行、桌面端和 Telegram / Discord 之间共享同一份记忆。
+        你描述目标，它执行、记住、越用越顺手。
+      </p>
+      <p class="hero-audience">适合：<em>行政 · 运营 · 自由职业 · 小团队老板</em></p>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="https://hermes-agent.nousresearch.com/desktop">下载桌面版</a>
+        <a class="btn btn-ghost" href="https://hermes-agent.nousresearch.com/docs/getting-started/quickstart">5 分钟快速上手</a>
+      </div>
+    </header>
+
+    <div class="stats">
+
+      <div class="stat"><strong>100+</strong><span>内置技能</span></div>
+      <div class="stat"><strong>20+</strong><span>消息平台接入</span></div>
+      <div class="stat"><strong>省20%</strong><span>模型费用 · 聚合全球顶尖模型</span></div>
+      <div class="stat"><strong>多端</strong><span>CLI · 桌面 · 消息一体</span></div>
+    </div>
+
+    <section id="value">
+      <div class="section-head">
+        <h2>为什么选择 Hermes</h2>
+        <p>为真实任务设计，而不是演示级提示词。</p>
+      </div>
+      <div class="pillars">
+        <article class="pillar" style="--accent: linear-gradient(90deg, #34d399, #22d3ee)">
+          <div class="icon">🧠</div>
+          <h3>长期记忆，越用越懂你</h3>
+          <p>记住你的项目背景、工作习惯和常用偏好——不用每次从头解释。关掉窗口再打开，它依然记得上次聊到哪。</p>
+        </article>
+        <article class="pillar" style="--accent: linear-gradient(90deg, #ffd700, #fbbf24)">
+          <div class="icon">⚡</div>
+          <h3>能执行，不只给建议</h3>
+          <p>改代码、跑测试、浏览网页、打补丁、委派子任务——危险操作可配置审批，YOLO 模式可一键加速。</p>
+        </article>
+        <article class="pillar" style="--accent: linear-gradient(90deg, #60a5fa, #a78bfa)">
+          <div class="icon">🧩</div>
+          <h3>一个大脑，多种界面</h3>
+          <p>CLI、TUI、原生桌面、Telegram、Discord、Slack 等同一会话。手机上开始，回工位无缝继续。</p>
+        </article>
+        <article class="pillar" style="--accent: linear-gradient(90deg, #f472b6, #fb923c)">
+          <div class="icon">🌱</div>
+          <h3>随使用而成长</h3>
+          <p>技能、插件、Cron 定时任务、记忆后端、Kanban 协作——能力可扩展，架构透明可审计。</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="scenarios">
+      <div class="section-head">
+        <h2>12 类真实使用场景</h2>
+        <p>找到最像你的那一列——Hermes 开箱就能解决这些痛点。</p>
+      </div>
+      <div class="scenarios">
+
+        <article class="card">
+          <span class="tag" style="color:#60a5fa">开发者</span>
+          <h3>少切换上下文，更快交付</h3>
+          <p class="problem">IDE、终端、浏览器、文档来回跳，心流不断被打断。</p>
+          <ul>
+            <li>跨仓库重构与 patch 工具</li>
+            <li>就地调试失败测试与 CI</li>
+            <li>PR 流程与 Code Review 技能</li>
+            <li>并行子 Agent 处理杂项</li>
+          </ul>
+        </article>
+
+        <article class="card">
+          <span class="tag" style="color:#fb923c">创业者 / 运营</span>
+          <h3>一个人干十个人的活</h3>
+          <p class="problem">文案、调研、客户跟进——时间永远不够。</p>
+          <ul>
+            <li>起草落地页、邮件、更新稿</li>
+            <li>Cron 定时报表与监控</li>
+            <li>自动化网页调研与抓取</li>
+            <li>长期记忆偏好与决策</li>
+          </ul>
+        </article>
+
+        <article class="card">
+          <span class="tag" style="color:#a78bfa">研究人员</span>
+          <h3>深度调研而不被标签页淹没</h3>
+          <p class="problem">文献综述和竞品扫描动辄占用整个周末。</p>
+          <ul>
+            <li>论文摘要与结构化笔记</li>
+            <li>多源检索与交叉验证</li>
+            <li>成果写入可分享文件</li>
+            <li>跨会话续接长项目</li>
+          </ul>
+        </article>
+
+        <article class="card">
+          <span class="tag" style="color:#34d399">DevOps / SRE</span>
+          <h3>用运维思维处理故障</h3>
+          <p class="problem">日志、发布、Runbook 分散在五处。</p>
+          <ul>
+            <li>在真实环境执行 Shell 命令</li>
+            <li>解析日志并建议修复步骤</li>
+            <li>健康检查与告警摘要</li>
+            <li>事后记录变更</li>
+          </ul>
+        </article>
+
+        <article class="card">
+          <span class="tag" style="color:#f472b6">内容创作者</span>
+          <h3>产出更多，打磨更快</h3>
+          <p class="problem">灵感不难，难的是把草稿和素材做完。</p>
+          <ul>
+            <li>从 Brief 生成视频/文章大纲</li>
+            <li>一稿多平台改写</li>
+            <li>图片生成（配置后）</li>
+            <li>人格与记忆保持品牌语气</li>
+          </ul>
+        </article>
+
+        <article class="card">
+          <span class="tag" style="color:#22d3ee">个人效率</span>
+          <h3>卸下脑力杂务</h3>
+          <p class="problem">「就五分钟」的小任务堆成山。</p>
+          <ul>
+            <li>邮件分拣与回复草稿</li>
+            <li>提醒、笔记、日历类技能</li>
+            <li>语音模式免提输入</li>
+            <li>Telegram 随时提问</li>
+          </ul>
+        </article>
+
+        <article class="card">
+          <span class="tag" style="color:#facc15">学生</span>
+          <h3>在做中学，而非复制粘贴</h3>
+          <p class="problem">需要能一步步带练的指导，而不是直接给答案。</p>
+          <ul>
+            <li>结合你的文件举例讲解</li>
+            <li>终端即时反馈练代码</li>
+            <li>学习计划与进度跟踪</li>
+            <li>陌生命令可审批执行</li>
+          </ul>
+        </article>
+
+        <article class="card">
+          <span class="tag" style="color:#94a3b8">团队</span>
+          <h3>协作而不多一个 SaaS 孤岛</h3>
+          <p class="problem">共享任务在聊天里被淹没。</p>
+          <ul>
+            <li>Kanban 多 Agent 协作看板</li>
+            <li>多 Profile 分角色 / 客户</li>
+            <li>Slack / Discord 网关机器人</li>
+            <li>技能装一次全员可用</li>
+          </ul>
+        </article>
+
+        <article class="card">
+          <span class="tag" style="color:#4ade80">隐私优先</span>
+          <h3>要 AI 助手，不要数据上云</h3>
+          <p class="problem">想要帮助，但不想把代码库交给陌生服务器。</p>
+          <ul>
+            <li>本地配置与会话存储</li>
+            <li>自托管模型端点</li>
+            <li>日志与输出脱敏</li>
+            <li>本地部署可审计</li>
+          </ul>
+        </article>
+
+        <article class="card">
+          <span class="tag" style="color:#e879f9">自动化</span>
+          <h3>把对话变成定时系统</h3>
+          <p class="problem">一次性提问无法 scale，你需要睡觉时也在跑的任务。</p>
+          <ul>
+            <li>Cron 可指定模型与技能</li>
+            <li>任务链式传递输出</li>
+            <li>推送到 Telegram / 邮件</li>
+            <li>后台终端完成通知</li>
+          </ul>
+        </article>
+
+        <article class="card">
+          <span class="tag" style="color:#38bdf8">进阶用户</span>
+          <h3>深度定制，无需从零造轮子</h3>
+          <p class="problem">其他 Agent 锁死 UI 和工具列表。</p>
+          <ul>
+            <li>100+ 内置技能 + 技能中心</li>
+            <li>MCP 接入内部系统</li>
+            <li>记忆 / 模型插件生态</li>
+            <li>YAML 配置可版本管理</li>
+          </ul>
+        </article>
+
+        <article class="card">
+          <span class="tag" style="color:#f87171">移动场景</span>
+          <h3>口袋里的操作员</h3>
+          <p class="problem">人不在工位，事还得推进。</p>
+          <ul>
+            <li>Telegram / WhatsApp 同一 Agent</li>
+            <li>手机审批高风险操作</li>
+            <li>Cron 与后台任务通知</li>
+            <li>回桌面无缝续会话</li>
+          </ul>
+        </article>
+
+      </div>
+    </section>
+
+    <section id="start">
+      <div class="section-head">
+        <h2>三步从 0 到可用</h2>
+        <p>不需要成为提示词专家。</p>
+      </div>
+      <div class="steps">
+        <article class="step">
+          <span class="step-num">1</span>
+          <h3>安装一次</h3>
+          <p>桌面安装包或一行脚本本地装好 Python、Git 与 Agent。离线资源包减少首次启动卡顿。</p>
+        </article>
+        <article class="step">
+          <span class="step-num">2</span>
+          <h3>连接模型</h3>
+          <p>注册 <a href="https://real-api.yunfm.cn/" target="_blank" rel="noopener noreferrer">Real-API</a>，填入 API Key 即可接入 GPT、Claude、Gemini 等全球顶级模型——OpenAI 兼容接口，桌面端与 CLI 同一套配置。</p>
+        </article>
+        <article class="step">
+          <span class="step-num">3</span>
+          <h3>交给它真活</h3>
+          <p>指向仓库、描述结果、按需批准工具。记忆与技能让下一次更快。</p>
+        </article>
+      </div>
+    </section>
+
+    <section>
+      <div class="section-head">
+        <h2>聊天机器人回答问题，Hermes 完成工作</h2>
+        <p>差别体现在日常事务里，而不是 benchmark 幻灯片。</p>
+      </div>
+      <div class="compare">
+        <div class="compare-box weak">
+          <h3>典型聊天界面</h3>
+          <ul>
+            <li>建议命令还得你自己敲</li>
+            <li>关标签页就失忆</li>
+            <li>碰不到你的文件和 Shell</li>
+            <li>通常只有一个浏览器窗口</li>
+          </ul>
+        </div>
+        <div class="compare-box highlight">
+          <h3>Hermes Agent</h3>
+          <ul>
+            <li>按策略执行工具，可审批</li>
+            <li>会话、记忆、技能持久化</li>
+            <li>终端 · 浏览器 · 文件 · API · 委派</li>
+            <li>CLI · 桌面 · 网关 · Cron · Kanban</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <div class="closing">
+      <h2>今天就开始解决一件真问题</h2>
+      <p>从你一直拖延的那件事入手——一次重构、周报、收件箱清理。Hermes-Lotus 用做好第一件小事赢得信任，然后第二件、第三件。</p>
+      <a class="btn btn-primary" href="https://hermes-agent.nousresearch.com/desktop">下载 Lotus 桌面版</a>
+    </div>
+
+    <footer>
+      <p>
+        <a href="https://github.com/NousResearch/hermes-agent">GitHub</a> ·
+        <a href="https://hermes-agent.nousresearch.com/docs/">文档</a> ·
+        <a href="https://nousresearch.com">Nous Research</a> · MIT License
+      </p>
+    </footer>
+  </div>
+</body>
+</html>

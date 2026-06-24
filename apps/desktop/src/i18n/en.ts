@@ -322,7 +322,27 @@ export const en: Translations = {
       justNow: 'just now',
       minAgo: count => `${count} min ago`,
       hoursAgo: count => `${count} hours ago`,
-      daysAgo: count => `${count} days ago`
+      daysAgo: count => `${count} days ago`,
+      activation: {
+        title: 'Activation',
+        loading: 'Loading activation info…',
+        currentCode: 'Activation code',
+        currentCodeDesc: 'Code bound to this device',
+        expiresAt: 'Expires',
+        expiresAtDesc: 'When this activation code stops working',
+        expiredDesc: 'This code has expired — enter a new one',
+        offline: 'Offline mode (could not reach activation server)',
+        notActivated: 'Not activated',
+        statusActive: 'Active',
+        statusExpired: 'Expired',
+        statusInactive: 'Inactive',
+        change: 'Change code',
+        changePrompt: 'Enter a new activation code to replace the current one',
+        save: 'Apply',
+        changing: 'Verifying…',
+        cancel: 'Cancel',
+        changeSuccess: 'Activation code updated'
+      }
     },
     config: {
       none: 'None',

@@ -96,6 +96,18 @@ function resolveBundledAgentSourceArchive() {
   }
 }
 
+function resolveBundledPortableGitDir() {
+  const resourcesPath = process.resourcesPath
+  if (!resourcesPath) return null
+  const candidate = path.join(resourcesPath, 'bundled-git')
+  try {
+    fs.accessSync(candidate, fs.constants.R_OK)
+    return candidate
+  } catch {
+    return null
+  }
+}
+
 function normalizeRepoUrl(raw) {
   if (!raw || typeof raw !== 'string') return null
   let url = raw.trim()
@@ -513,6 +525,10 @@ function buildPinArgs(installStamp) {
   const bundledSource = resolveBundledAgentSourceArchive()
   if (bundledSource) {
     args.push('-BundledSourceArchive', bundledSource)
+  }
+  const bundledGit = resolveBundledPortableGitDir()
+  if (bundledGit) {
+    args.push('-BundledPortableGitDir', bundledGit)
   }
   return args
 }

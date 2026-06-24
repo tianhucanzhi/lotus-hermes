@@ -5,6 +5,7 @@ import { BrandMark } from '@/components/brand-mark'
 import { useI18n } from '@/i18n'
 import { $desktopVersion, refreshDesktopVersion } from '@/store/updates'
 
+import { ActivationSection } from './activation-section'
 import { SettingsContent } from './primitives'
 import { UninstallSection } from './uninstall-section'
 
@@ -28,6 +29,8 @@ export function AboutSettings() {
           </p>
         </div>
       </div>
+
+      <ActivationSection />
 
       <div className="mx-auto mt-6 w-full max-w-2xl">
         <UninstallSection />
