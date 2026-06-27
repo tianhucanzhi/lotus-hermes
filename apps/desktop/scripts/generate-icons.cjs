@@ -12,7 +12,7 @@ const { execFileSync } = require('node:child_process')
 
 const ROOT = path.resolve(__dirname, '..')
 const SVG_PATH = path.join(ROOT, 'assets', 'lotus-icon.svg')
-const ICO_SIZES = [16, 24, 32, 48, 64, 128, 256, 512]
+const ICO_SIZES = [16, 32, 48, 64, 128, 256]
 
 function fileExists(target) {
   try {
