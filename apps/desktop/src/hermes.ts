@@ -35,6 +35,11 @@ import type {
   SessionInfo,
   SessionMessagesResponse,
   SessionSearchResponse,
+  SkillHubPreview,
+  SkillHubResult,
+  SkillHubScan,
+  SkillHubSearchResponse,
+  SkillHubSourcesResponse,
   SkillInfo,
   StatusResponse,
   ToolsetConfig,
@@ -43,6 +48,10 @@ import type {
 
 const DEFAULT_GATEWAY_REQUEST_TIMEOUT_MS = 30_000
 const SESSION_LIST_REQUEST_TIMEOUT_MS = 60_000
+// Hub search runs parallel network queries with a 30s backend cap (see
+// web_server.py search_skills_hub). Desktop's default 15s fetch timeout
+// fires first and surfaces as a false "backend unreachable" error.
+const SKILLS_HUB_REQUEST_TIMEOUT_MS = 300_000
 
 export type {
   ActionResponse,
@@ -95,6 +104,13 @@ export type {
   SessionRuntimeInfo,
   SessionSearchResponse,
   SessionSearchResult,
+  SkillHubInstalledEntry,
+  SkillHubPreview,
+  SkillHubResult,
+  SkillHubScan,
+  SkillHubSearchResponse,
+  SkillHubSource,
+  SkillHubSourcesResponse,
   SkillInfo,
   StaleAuxAssignment,
   StatusResponse,
@@ -422,6 +438,63 @@ export function toggleSkill(name: string, enabled: boolean): Promise<{ ok: boole
     path: '/api/skills/toggle',
     method: 'PUT',
     body: { name, enabled }
+  })
+}
+
+export function getSkillHubSources(): Promise<SkillHubSourcesResponse> {
+  return window.hermesDesktop.api<SkillHubSourcesResponse>({
+    ...profileScoped(),
+    path: '/api/skills/hub/sources',
+    timeoutMs: SKILLS_HUB_REQUEST_TIMEOUT_MS
+  })
+}
+
+export function searchSkillsHub(q: string, source = 'all', limit = 20): Promise<SkillHubSearchResponse> {
+  const params = new URLSearchParams({
+    q,
+    source,
+    limit: String(limit)
+  })
+
+  return window.hermesDesktop.api<SkillHubSearchResponse>({
+    ...profileScoped(),
+    path: `/api/skills/hub/search?${params.toString()}`,
+    timeoutMs: SKILLS_HUB_REQUEST_TIMEOUT_MS
+  })
+}
+
+export function previewSkillFromHub(identifier: string): Promise<SkillHubPreview> {
+  return window.hermesDesktop.api<SkillHubPreview>({
+    ...profileScoped(),
+    path: `/api/skills/hub/preview?identifier=${encodeURIComponent(identifier)}`,
+    timeoutMs: SKILLS_HUB_REQUEST_TIMEOUT_MS
+  })
+}
+
+export function scanSkillFromHub(identifier: string): Promise<SkillHubScan> {
+  return window.hermesDesktop.api<SkillHubScan>({
+    ...profileScoped(),
+    path: `/api/skills/hub/scan?identifier=${encodeURIComponent(identifier)}`,
+    timeoutMs: SKILLS_HUB_REQUEST_TIMEOUT_MS
+  })
+}
+
+export function installSkillFromHub(identifier: string): Promise<ActionResponse> {
+  return window.hermesDesktop.api<ActionResponse>({
+    ...profileScoped(),
+    path: '/api/skills/hub/install',
+    method: 'POST',
+    body: { identifier },
+    timeoutMs: SKILLS_HUB_REQUEST_TIMEOUT_MS
+  })
+}
+
+export function updateSkillsFromHub(): Promise<ActionResponse> {
+  return window.hermesDesktop.api<ActionResponse>({
+    ...profileScoped(),
+    path: '/api/skills/hub/update',
+    method: 'POST',
+    timeoutMs: SKILLS_HUB_REQUEST_TIMEOUT_MS
   })
 }
 

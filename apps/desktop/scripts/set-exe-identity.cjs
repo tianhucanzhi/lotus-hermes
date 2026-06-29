@@ -38,6 +38,23 @@
 const path = require('node:path')
 const fs = require('node:fs')
 
+function assertValidIco(iconPath) {
+  const head = fs.readFileSync(iconPath).subarray(0, 4)
+
+  if (head[0] === 0 && head[1] === 0 && head[2] === 1 && head[3] === 0) {
+    return
+  }
+
+  if (head[0] === 0x89 && head[1] === 0x50 && head[2] === 0x4e && head[3] === 0x47) {
+    throw new Error(
+      `${iconPath} is a PNG file, not a Windows .ico — rcedit and NSIS will reject it. ` +
+        'Restore assets/icon.ico or run: node scripts/generate-icons.cjs'
+    )
+  }
+
+  throw new Error(`${iconPath} is not a valid Windows .ico (bad header)`)
+}
+
 // Stamp the Hermes icon + identity onto `exe`. Resolves on success, throws on
 // failure. `desktopRoot` defaults to this script's package root so the icon and
 // the rcedit dependency resolve regardless of cwd.
@@ -51,6 +68,8 @@ async function stampExeIdentity(exe, desktopRoot = path.resolve(__dirname, '..')
   if (!fs.existsSync(icon)) {
     throw new Error(`icon not found: ${icon}`)
   }
+
+  assertValidIco(icon)
 
   // rcedit is a direct devDependency of apps/desktop, so it resolves whether
   // we're run from the desktop dir or the repo root (workspace hoist).

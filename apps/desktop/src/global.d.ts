@@ -129,6 +129,8 @@ export type DesktopActivationError =
   | 'not_activated'
   | 'not_found'
 
+export type DesktopActivationEditionType = 1 | 2
+
 export interface DesktopActivationStatus {
   activated: boolean
   skipped?: boolean
@@ -136,6 +138,7 @@ export interface DesktopActivationStatus {
   expiresAt?: string
   activatedAt?: string
   machineId?: string
+  editionType?: DesktopActivationEditionType
   offline?: boolean
   reason?: DesktopActivationError
 }
@@ -147,6 +150,7 @@ export interface DesktopActivationRedeemResult {
   expiresAt?: string
   activatedAt?: string
   machineId?: string
+  editionType?: DesktopActivationEditionType
   error?: DesktopActivationError
   message?: string
 }

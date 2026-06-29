@@ -1,7 +1,7 @@
 import { type QueryClient } from '@tanstack/react-query'
 import { useCallback } from 'react'
 
-import { getGlobalModelInfo, setGlobalModel } from '@/hermes'
+import { getGlobalModelInfo } from '@/hermes'
 import { useI18n } from '@/i18n'
 import { notifyError } from '@/store/notifications'
 import { $currentModel, $currentProvider, setCurrentModel, setCurrentProvider } from '@/store/session'
@@ -11,6 +11,16 @@ interface ModelSelection {
   model: string
   persistGlobal: boolean
   provider: string
+}
+
+function buildModelSwitchValue(selection: ModelSelection): string {
+  const parts = [selection.model, '--provider', selection.provider]
+
+  if (selection.persistGlobal) {
+    parts.push('--global')
+  }
+
+  return parts.join(' ')
 }
 
 interface ModelControlsOptions {
@@ -37,6 +47,22 @@ export function useModelControls({ activeSessionId, queryClient, requestGateway 
 
   const refreshCurrentModel = useCallback(async () => {
     try {
+      if (activeSessionId) {
+        const result = await requestGateway<ModelOptionsResponse>('model.options', {
+          session_id: activeSessionId
+        })
+
+        if (typeof result.model === 'string' && result.model) {
+          setCurrentModel(result.model)
+        }
+
+        if (typeof result.provider === 'string' && result.provider) {
+          setCurrentProvider(result.provider)
+        }
+
+        return
+      }
+
       const result = await getGlobalModelInfo()
 
       if (typeof result.model === 'string') {
@@ -49,7 +75,7 @@ export function useModelControls({ activeSessionId, queryClient, requestGateway 
     } catch {
       // The delayed session.info event still updates this once the agent is ready.
     }
-  }, [])
+  }, [activeSessionId, requestGateway])
 
   // Returns whether the switch succeeded so callers can await it before
   // applying follow-up changes (e.g. editing a model's reasoning/fast must land
@@ -69,9 +95,10 @@ export function useModelControls({ activeSessionId, queryClient, requestGateway 
 
       try {
         if (activeSessionId) {
-          await requestGateway('slash.exec', {
+          await requestGateway<{ value?: string; warning?: string }>('config.set', {
+            key: 'model',
             session_id: activeSessionId,
-            command: `/model ${selection.model} --provider ${selection.provider}${selection.persistGlobal ? ' --global' : ''}`
+            value: buildModelSwitchValue(selection)
           })
 
           if (selection.persistGlobal) {
@@ -85,7 +112,10 @@ export function useModelControls({ activeSessionId, queryClient, requestGateway 
           return true
         }
 
-        await setGlobalModel(selection.provider, selection.model)
+        await requestGateway<{ value?: string; warning?: string }>('config.set', {
+          key: 'model',
+          value: buildModelSwitchValue(selection)
+        })
         void refreshCurrentModel()
         void queryClient.invalidateQueries({ queryKey: ['model-options'] })
 

@@ -35,6 +35,7 @@ def main() -> None:
                   max_activations INT UNSIGNED NOT NULL DEFAULT 1,
                   activation_count INT UNSIGNED NOT NULL DEFAULT 0,
                   status ENUM('active','disabled') NOT NULL DEFAULT 'active',
+                  type TINYINT UNSIGNED NOT NULL DEFAULT 1,
                   note VARCHAR(255) NULL,
                   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -75,7 +76,7 @@ def main() -> None:
             cur.execute("SHOW TABLES")
             print("tables:", [row[0] for row in cur.fetchall()])
             cur.execute(
-                "SELECT code, expires_at, max_activations, status FROM activation_codes"
+                "SELECT code, expires_at, max_activations, status, type FROM activation_codes"
             )
             for row in cur.fetchall():
                 print("code:", row)

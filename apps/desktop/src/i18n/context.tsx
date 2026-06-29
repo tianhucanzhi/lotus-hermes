@@ -3,7 +3,7 @@ import { createContext, type ReactNode, useCallback, useContext, useEffect, useM
 import { getHermesConfigRecord, type HermesConfigRecord, saveHermesConfig } from '@/hermes'
 
 import { TRANSLATIONS } from './catalog'
-import { DEFAULT_LOCALE, localeConfigValue, normalizeLocale } from './languages'
+import { DEFAULT_LOCALE, isSupportedLocaleValue, localeConfigValue, normalizeLocale } from './languages'
 import { setRuntimeI18nLocale } from './runtime'
 import type { Locale, Translations } from './types'
 
@@ -39,6 +39,25 @@ export function getConfigDisplayLanguage(config: HermesConfigRecord): unknown {
   return isRecord(config.display) ? config.display.language : undefined
 }
 
+function isConfigDisplayLanguageExplicit(config: HermesConfigRecord): boolean {
+  return isRecord(config.display) && config.display.language_explicit === true
+}
+
+/** Desktop defaults to 简体中文; respect only explicit user picks in config. */
+export function localeFromHermesConfig(config: HermesConfigRecord): Locale {
+  const raw = getConfigDisplayLanguage(config)
+
+  if (!isConfigDisplayLanguageExplicit(config)) {
+    return DEFAULT_LOCALE
+  }
+
+  if (typeof raw !== 'string' || !isSupportedLocaleValue(raw)) {
+    return DEFAULT_LOCALE
+  }
+
+  return normalizeLocale(raw)
+}
+
 export function withConfigDisplayLanguage(config: HermesConfigRecord, locale: Locale): HermesConfigRecord {
   const display = isRecord(config.display) ? config.display : {}
 
@@ -46,7 +65,8 @@ export function withConfigDisplayLanguage(config: HermesConfigRecord, locale: Lo
     ...config,
     display: {
       ...display,
-      language: localeConfigValue(locale)
+      language: localeConfigValue(locale),
+      language_explicit: true
     }
   }
 }
@@ -108,7 +128,7 @@ export function I18nProvider({ children, configClient = defaultConfigClient, ini
       .getConfig()
       .then(config => {
         if (!cancelled) {
-          setLocaleState(normalizeLocale(getConfigDisplayLanguage(config)))
+          setLocaleState(localeFromHermesConfig(config))
         }
       })
       .catch(error => {

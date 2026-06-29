@@ -28,7 +28,7 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ErrorBoundary label="root">
       <QueryClientProvider client={queryClient}>
-        <I18nProvider>
+        <I18nProvider initialLocale="zh">
           <ThemeProvider>
             <HapticsProvider>
               <HashRouter>

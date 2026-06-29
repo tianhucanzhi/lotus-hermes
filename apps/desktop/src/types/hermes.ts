@@ -596,6 +596,76 @@ export interface ActionStatusResponse {
   running: boolean
 }
 
+export interface SkillHubResult {
+  name: string
+  description: string
+  source: string
+  identifier: string
+  trust_level: string
+  repo: string | null
+  tags: string[]
+}
+
+export interface SkillHubInstalledEntry {
+  name: string | null
+  trust_level: string | null
+  scan_verdict: string | null
+}
+
+export interface SkillHubSearchResponse {
+  results: SkillHubResult[]
+  source_counts: Record<string, number>
+  timed_out: string[]
+  installed: Record<string, SkillHubInstalledEntry>
+}
+
+export interface SkillHubSource {
+  id: string
+  label: string
+  rate_limited?: boolean
+  available?: boolean
+}
+
+export interface SkillHubSourcesResponse {
+  sources: SkillHubSource[]
+  index_available: boolean
+  featured: SkillHubResult[]
+  installed: Record<string, SkillHubInstalledEntry>
+}
+
+export interface SkillHubPreview {
+  name: string
+  description: string
+  source: string
+  identifier: string
+  trust_level: string
+  repo: string | null
+  tags: string[]
+  skill_md: string
+  files: string[]
+}
+
+export interface SkillHubScanFinding {
+  severity: string
+  category: string
+  file: string
+  line: number
+  description: string
+}
+
+export interface SkillHubScan {
+  name: string
+  identifier: string
+  source: string
+  trust_level: string
+  verdict: string
+  summary: string
+  policy: 'allow' | 'ask' | 'block'
+  policy_reason: string
+  findings: SkillHubScanFinding[]
+  severity_counts: Record<string, number>
+}
+
 export interface AuxiliaryTaskAssignment {
   base_url: string
   model: string

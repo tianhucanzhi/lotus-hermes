@@ -7434,7 +7434,21 @@ def _desktop_pack_output_dirs(desktop_dir: Path) -> list[Path]:
     if sys.platform == "win32":
         local = os.environ.get("LOCALAPPDATA")
         if local:
-            dirs.append(Path(local) / "Lotus" / "desktop-pack")
+            lotus_root = Path(local) / "Lotus"
+            pack_dirs: list[tuple[float, Path]] = []
+            if lotus_root.is_dir():
+                for candidate in lotus_root.glob("desktop-pack*"):
+                    if not candidate.is_dir():
+                        continue
+                    try:
+                        pack_dirs.append((candidate.stat().st_mtime, candidate))
+                    except OSError:
+                        continue
+            pack_dirs.sort(key=lambda item: item[0], reverse=True)
+            if pack_dirs:
+                dirs.extend(path for _, path in pack_dirs)
+            else:
+                dirs.append(lotus_root / "desktop-pack")
     dirs.append(desktop_dir / "release")
 
     seen: set[Path] = set()

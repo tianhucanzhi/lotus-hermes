@@ -52,6 +52,24 @@ function isReleaseLocked(releaseDir) {
   }
 }
 
+function resolveUnlockedPackOutput(preferred) {
+  if (process.platform !== 'win32' || !isReleaseLocked(preferred)) {
+    return preferred
+  }
+
+  console.warn(
+    `[pack-desktop] ${preferred} is locked by another process ` +
+      '(close Lotus Desktop, then delete that folder if the lock persists).'
+  )
+
+  const parent = path.dirname(preferred)
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
+  const alternate = path.join(parent, `desktop-pack-${stamp}`)
+  console.log(`[pack-desktop] using alternate output: ${alternate}`)
+
+  return alternate
+}
+
 function main() {
   let output = resolvePackOutput()
 
@@ -60,6 +78,8 @@ function main() {
     output = path.join(local, 'Lotus', 'desktop-pack')
     console.log(`[pack-desktop] release/ is locked by another process; using ${output}`)
   }
+
+  output = resolveUnlockedPackOutput(output)
 
   fs.mkdirSync(output, { recursive: true })
   console.log(`[pack-desktop] output directory: ${output}`)

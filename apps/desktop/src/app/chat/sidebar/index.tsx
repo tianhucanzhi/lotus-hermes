@@ -173,15 +173,11 @@ function reconcileOrderIds(currentIds: string[], orderIds: string[]): string[] {
   const current = new Set(currentIds)
   const next = orderIds.filter(id => current.has(id))
   const known = new Set(next)
+  // currentIds arrive recency-sorted; prepend unseen rows so a brand-new chat
+  // surfaces at the top instead of after every manually-ordered older session.
+  const novel = currentIds.filter(id => !known.has(id))
 
-  for (const id of currentIds) {
-    if (!known.has(id)) {
-      next.push(id)
-      known.add(id)
-    }
-  }
-
-  return next
+  return novel.length ? [...novel, ...next] : next
 }
 
 function sameIds(left: string[], right: string[]) {
@@ -659,7 +655,10 @@ export function ChatSidebar({
 
   const showSessionSkeletons = sessionsLoading && sortedSessions.length === 0
 
-  const showSessionSections = showSessionSkeletons || sortedSessions.length > 0
+  const handleNewSession = useCallback(() => {
+    $newChatProfile.set(null)
+    onNavigate(SIDEBAR_NAV.find(item => item.id === 'new-session')!)
+  }, [onNavigate])
 
   // Pagination is scope-aware. In "All profiles" mode it tracks the global
   // unified set. When scoped to one profile it must compare that profile's own
@@ -811,7 +810,7 @@ export function ChatSidebar({
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {contentVisible && showSessionSections && (
+        {contentVisible && (
           <div className="shrink-0 px-2 pb-1 pt-1">
             <SearchField
               aria-label={s.searchAria}
@@ -823,7 +822,7 @@ export function ChatSidebar({
           </div>
         )}
 
-        {contentVisible && showSessionSections && trimmedQuery && (
+        {contentVisible && trimmedQuery && (
           <SidebarSessionsSection
             activeSessionId={activeSidebarSessionId}
             contentClassName="flex min-h-0 flex-1 flex-col gap-px overflow-y-auto overscroll-contain pb-1.75"
@@ -847,7 +846,7 @@ export function ChatSidebar({
           />
         )}
 
-        {contentVisible && showSessionSections && !trimmedQuery && (
+        {contentVisible && !trimmedQuery && (
           <SidebarSessionsSection
             activeSessionId={activeSidebarSessionId}
             contentClassName="flex min-h-10 shrink-0 flex-col gap-px rounded-lg pb-2 pt-1"
@@ -869,7 +868,7 @@ export function ChatSidebar({
           />
         )}
 
-        {contentVisible && showSessionSections && !trimmedQuery && (
+        {contentVisible && !trimmedQuery && (
           <SidebarSessionsSection
             activeSessionId={activeSidebarSessionId}
             contentClassName={cn(
@@ -879,7 +878,15 @@ export function ChatSidebar({
               showAllProfiles ? 'gap-3' : 'gap-px'
             )}
             dndSensors={dndSensors}
-            emptyState={showSessionSkeletons ? <SidebarSessionSkeletons /> : <SidebarAllPinnedState />}
+            emptyState={
+              showSessionSkeletons ? (
+                <SidebarSessionSkeletons />
+              ) : sortedSessions.length === 0 ? (
+                <SidebarNoSessionsState />
+              ) : (
+                <SidebarAllPinnedState />
+              )
+            }
             footer={
               // Hide "load more" only when workspace-grouped (those groups page
               // themselves). ALL-profiles now pages per-profile from each profile
@@ -895,33 +902,45 @@ export function ChatSidebar({
             forceEmptyState={showSessionSkeletons}
             groups={displayAgentGroups}
             headerAction={
-              // Always reserve the icon-xs (size-6) slot so the header keeps the
-              // same height whether or not the toggle renders — otherwise the
-              // "Sessions" label jumps when switching to the ALL-profiles view.
-              // Grouping operates on unpinned recents; if everything is pinned
-              // the toggle does nothing, and it's irrelevant in the ALL-profiles
-              // view (always grouped by profile), so hide the button (not the slot).
-              <div className="grid size-6 shrink-0 place-items-center">
-                {!showAllProfiles && localAgentSessions.length > 0 ? (
-                  <Tip label={agentsGrouped ? s.groupTitleGrouped : s.groupTitleUngrouped}>
-                    <Button
-                      aria-label={agentsGrouped ? s.groupAriaGrouped : s.groupAriaUngrouped}
-                      className={cn(
-                        'text-(--ui-text-tertiary) opacity-70 hover:bg-(--ui-control-hover-background) hover:text-foreground hover:opacity-100 focus-visible:opacity-100',
-                        agentsGrouped && 'bg-(--ui-control-active-background) text-foreground opacity-100'
-                      )}
-                      onClick={event => {
-                        event.stopPropagation()
-                        setSidebarRecentsOpen(true)
-                        setSidebarAgentsGrouped(!agentsGrouped)
-                      }}
-                      size="icon-xs"
-                      variant="ghost"
-                    >
-                      <Codicon name={agentsGrouped ? 'list-unordered' : 'root-folder'} size="0.75rem" />
-                    </Button>
-                  </Tip>
-                ) : null}
+              <div className="flex shrink-0 items-center gap-0.5">
+                <Tip label={s.nav['new-session']}>
+                  <Button
+                    aria-label={s.nav['new-session']}
+                    className="text-(--ui-text-tertiary) opacity-70 hover:bg-(--ui-control-hover-background) hover:text-foreground hover:opacity-100 focus-visible:opacity-100"
+                    onClick={event => {
+                      event.stopPropagation()
+                      handleNewSession()
+                    }}
+                    size="icon-xs"
+                    variant="ghost"
+                  >
+                    <Codicon name="add" size="0.75rem" />
+                  </Button>
+                </Tip>
+                {/* Reserve the icon-xs slot so the header height stays stable when
+                    the workspace-group toggle is hidden. */}
+                <div className="grid size-6 shrink-0 place-items-center">
+                  {!showAllProfiles && localAgentSessions.length > 0 ? (
+                    <Tip label={agentsGrouped ? s.groupTitleGrouped : s.groupTitleUngrouped}>
+                      <Button
+                        aria-label={agentsGrouped ? s.groupAriaGrouped : s.groupAriaUngrouped}
+                        className={cn(
+                          'text-(--ui-text-tertiary) opacity-70 hover:bg-(--ui-control-hover-background) hover:text-foreground hover:opacity-100 focus-visible:opacity-100',
+                          agentsGrouped && 'bg-(--ui-control-active-background) text-foreground opacity-100'
+                        )}
+                        onClick={event => {
+                          event.stopPropagation()
+                          setSidebarRecentsOpen(true)
+                          setSidebarAgentsGrouped(!agentsGrouped)
+                        }}
+                        size="icon-xs"
+                        variant="ghost"
+                      >
+                        <Codicon name={agentsGrouped ? 'list-unordered' : 'root-folder'} size="0.75rem" />
+                      </Button>
+                    </Tip>
+                  ) : null}
+                </div>
               </div>
             }
             label={s.sessions}
@@ -953,8 +972,6 @@ export function ChatSidebar({
             open={cronOpen}
           />
         )}
-
-        {contentVisible && !showSessionSections && <div className="min-h-0 flex-1" />}
 
         {contentVisible && (
           <div className="shrink-0 px-0.5 pb-1 pt-0.5">
@@ -1013,6 +1030,16 @@ function SidebarAllPinnedState() {
   return (
     <div className="grid min-h-24 place-items-center rounded-lg text-center text-xs text-(--ui-text-tertiary)">
       {t.sidebar.allPinned}
+    </div>
+  )
+}
+
+function SidebarNoSessionsState() {
+  const { t } = useI18n()
+
+  return (
+    <div className="grid min-h-24 place-items-center rounded-lg px-2 text-center text-xs text-(--ui-text-tertiary)">
+      {t.sidebar.noSessions}
     </div>
   )
 }

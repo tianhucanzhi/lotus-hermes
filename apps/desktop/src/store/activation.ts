@@ -1,6 +1,6 @@
 import { atom } from 'nanostores'
 
-import type { DesktopActivationError, DesktopActivationStatus } from '@/global'
+import type { DesktopActivationEditionType, DesktopActivationError, DesktopActivationStatus } from '@/global'
 
 export interface ActivationState {
   loading: boolean
@@ -9,6 +9,7 @@ export interface ActivationState {
   code?: string
   expiresAt?: string
   activatedAt?: string
+  editionType?: DesktopActivationEditionType
   offline?: boolean
   reason?: DesktopActivationError
   error?: string
@@ -32,6 +33,7 @@ function applyStatus(status: DesktopActivationStatus | null | undefined): void {
     code: status.code,
     expiresAt: status.expiresAt,
     activatedAt: status.activatedAt,
+    editionType: status.editionType,
     offline: status.offline,
     reason: status.reason
   })
@@ -71,7 +73,8 @@ export async function submitActivationCode(
       activated: true,
       code: result.code,
       expiresAt: result.expiresAt,
-      activatedAt: result.activatedAt
+      activatedAt: result.activatedAt,
+      editionType: result.editionType
     })
 
     return { ok: true }

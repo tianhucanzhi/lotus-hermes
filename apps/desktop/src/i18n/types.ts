@@ -158,6 +158,10 @@ export interface Translations {
     unmuteHaptics: string
     openSettings: string
     openKeybinds: string
+    openRealApi: string
+    openRealApiTitle: string
+    editionPersonal: string
+    editionEnterprise: string
   }
 
   keybinds: {
@@ -527,6 +531,7 @@ export interface Translations {
   skills: {
     tabSkills: string
     tabToolsets: string
+    tabMarketplace: string
     all: string
     searchSkills: string
     searchToolsets: string
@@ -551,6 +556,53 @@ export interface Translations {
     toolsetDisabled: string
     appliesToNewSessions: (name: string) => string
     failedToUpdate: (name: string) => string
+    hub: {
+      actionDone: string
+      actionRunning: string
+      actionStarting: string
+      connectedHubs: string
+      connecting: string
+      detailDescription: (name: string) => string
+      details: string
+      dismiss: string
+      emptyLanding: string
+      featuredHint: string
+      featuredTitle: string
+      files: string
+      install: string
+      installCompleteMessage: string
+      installCompleteTitle: string
+      installFailed: string
+      installStarting: (identifier: string) => string
+      installed: string
+      loading: string
+      loadingPreview: string
+      noFindings: string
+      noResults: string
+      openSkill: (name: string) => string
+      policyBlock: string
+      previewEmpty: string
+      previewFailed: string
+      previewLoadFailed: string
+      readSkillMd: string
+      rescan: string
+      scanFailed: string
+      scanPrompt: string
+      scanning: string
+      search: string
+      searchFailed: string
+      searchMeta: (count: number, ms: number | null) => string
+      searchPlaceholder: string
+      searching: string
+      securityScan: string
+      sourcesFallback: string
+      timedOut: (sources: string) => string
+      trust: { builtin: string; community: string; trusted: string; unknown: string }
+      updateAll: string
+      updateFailed: string
+      updateStarting: string
+      verdict: (value: string) => string
+    }
   }
 
   agents: {
@@ -878,6 +930,7 @@ export interface Translations {
     groupTitleGrouped: string
     groupTitleUngrouped: string
     allPinned: string
+    noSessions: string
     shiftClickHint: string
     noWorkspace: string
     newSessionIn: (label: string) => string

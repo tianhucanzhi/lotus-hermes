@@ -290,6 +290,13 @@ const BOOT_FAKE_STEP_MS = (() => {
 })()
 const { APP_DISPLAY_NAME, CLI_COMMAND, DESKTOP_APP_NAME } = require('./branding.cjs')
 const APP_NAME = APP_DISPLAY_NAME
+// Lotus desktop display version — keep in sync with apps/desktop/package.json.
+const DESKTOP_APP_VERSION = '0.16.0'
+
+function resolveHermesVersion() {
+  return DESKTOP_APP_VERSION
+}
+
 const TITLEBAR_HEIGHT = 34
 const MACOS_TRAFFIC_LIGHTS_HEIGHT = 14
 const WINDOW_BUTTON_POSITION = {
@@ -5565,28 +5572,6 @@ ipcMain.handle('hermes:updates:branch:set', async (_event, name) => {
   writeDesktopUpdateConfig({ branch })
   return { branch }
 })
-
-// Resolve the canonical Hermes version (the one `release.py` bumps in
-// hermes_cli/__init__.py + pyproject.toml) so the desktop About panel shows the
-// real Hermes version instead of the Electron app's own package.json version,
-// which historically drifted (stuck at 0.0.2). Falls back to app.getVersion()
-// when the source tree can't be read (e.g. a packaged build without the repo).
-function resolveHermesVersion() {
-  try {
-    const root = resolveUpdateRoot()
-    const initPath = path.join(root, 'hermes_cli', '__init__.py')
-    if (fileExists(initPath)) {
-      const raw = fs.readFileSync(initPath, 'utf8')
-      const match = raw.match(/__version__\s*=\s*["']([^"']+)["']/)
-      if (match) {
-        return match[1]
-      }
-    }
-  } catch {
-    // Fall through to the Electron app version below.
-  }
-  return app.getVersion()
-}
 
 // Re-resolve the live Hermes version and push it into the native About panel
 // just before showing it, so an in-place `hermes update` is reflected without

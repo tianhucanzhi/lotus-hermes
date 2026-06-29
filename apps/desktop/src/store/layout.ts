@@ -149,6 +149,18 @@ export function setSidebarSessionOrderIds(ids: string[]) {
   }
 }
 
+// New chats land at the top of the recents list. reconcileOrderIds also prepends
+// novel ids, but calling this from upsertOptimisticSession avoids a one-frame
+// flash where orderByIds parks the row at the tail (and out of paginated groups).
+export function prependSidebarSessionOrder(sessionId: string): void {
+  const prev = $sidebarSessionOrderIds.get()
+  const next = insertUniqueId(prev, sessionId, 0)
+
+  if (!arraysEqual(prev, next)) {
+    $sidebarSessionOrderIds.set(next)
+  }
+}
+
 export function setSidebarWorkspaceOrderIds(ids: string[]) {
   if (!arraysEqual($sidebarWorkspaceOrderIds.get(), ids)) {
     $sidebarWorkspaceOrderIds.set(ids)

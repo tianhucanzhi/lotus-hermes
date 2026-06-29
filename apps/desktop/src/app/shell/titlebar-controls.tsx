@@ -7,6 +7,7 @@ import { Codicon } from '@/components/ui/codicon'
 import { useI18n } from '@/i18n'
 import { triggerHaptic } from '@/lib/haptics'
 import { cn } from '@/lib/utils'
+import { $activation } from '@/store/activation'
 import { $hapticsMuted, toggleHapticsMuted } from '@/store/haptics'
 import { toggleKeybindPanel } from '@/store/keybinds'
 import {
@@ -22,6 +23,8 @@ import { appViewForPath, isOverlayView } from '../routes'
 
 import { titlebarButtonClass } from './titlebar'
 
+const REAL_API_URL = 'https://real-api.yunfm.cn'
+
 export interface TitlebarTool {
   id: string
   label: string
@@ -30,7 +33,11 @@ export interface TitlebarTool {
   disabled?: boolean
   hidden?: boolean
   href?: string
-  icon: ReactNode
+  icon?: ReactNode
+  /** Visible label for text-style titlebar actions (no icon). */
+  textLabel?: string
+  /** Render as a non-interactive label (no button chrome). */
+  displayOnly?: boolean
   onSelect?: () => void
   title?: string
   to?: string
@@ -50,6 +57,7 @@ export function TitlebarControls({ leftTools = [], tools = [], onOpenSettings }:
   const navigate = useNavigate()
   const location = useLocation()
   const hapticsMuted = useStore($hapticsMuted)
+  const activation = useStore($activation)
   const fileBrowserOpen = useStore($fileBrowserOpen)
   const sidebarOpen = useStore($sidebarOpen)
   const panesFlipped = useStore($panesFlipped)
@@ -108,8 +116,37 @@ export function TitlebarControls({ leftTools = [], tools = [], onOpenSettings }:
     }
   }
 
+  const resolvedEditionType =
+    activation.activated && !activation.skipped ? activation.editionType ?? 1 : undefined
+  const editionLabel =
+    resolvedEditionType === 2
+      ? t.titlebar.editionEnterprise
+      : resolvedEditionType === 1
+        ? t.titlebar.editionPersonal
+        : null
+
   // Static system tools — always pinned to the screen's right edge.
   const systemTools: TitlebarTool[] = [
+    {
+      id: 'real-api',
+      label: t.titlebar.openRealApiTitle,
+      textLabel: 'Real-Api',
+      title: t.titlebar.openRealApiTitle,
+      onSelect: () => {
+        triggerHaptic('open')
+        void window.hermesDesktop?.openExternal?.(REAL_API_URL)
+      }
+    },
+    ...(editionLabel
+      ? [
+          {
+            id: 'edition',
+            label: editionLabel,
+            textLabel: editionLabel,
+            displayOnly: true
+          } satisfies TitlebarTool
+        ]
+      : []),
     {
       active: hapticsMuted,
       icon: <Codicon name={hapticsMuted ? 'mute' : 'unmute'} />,
@@ -197,14 +234,34 @@ export function TitlebarControls({ leftTools = [], tools = [], onOpenSettings }:
 }
 
 function TitlebarToolButton({ navigate, tool }: { navigate: ReturnType<typeof useNavigate>; tool: TitlebarTool }) {
+  const isText = Boolean(tool.textLabel?.trim())
   // Titlebar actions never show an active background — state reads from the
   // icon itself (e.g. the mute/unmute glyph). aria-pressed still carries it
   // for a11y.
-  const className = cn(titlebarButtonClass, 'bg-transparent select-none', tool.className)
+  const className = cn(
+    titlebarButtonClass,
+    'bg-transparent select-none',
+    isText && 'h-(--titlebar-control-height) px-1',
+    tool.className
+  )
+  const size = isText ? 'xs' : 'icon-titlebar'
+  const content = isText ? tool.textLabel : tool.icon
+
+  if (tool.displayOnly) {
+    return (
+      <span
+        aria-label={tool.label}
+        className={cn(className, 'inline-flex items-center text-xs text-muted-foreground')}
+        title={tool.title ?? tool.label}
+      >
+        {content}
+      </span>
+    )
+  }
 
   if (tool.href) {
     return (
-      <Button asChild className={className} size="icon-titlebar" variant="ghost">
+      <Button asChild className={className} size={size} variant="ghost">
         <a
           aria-label={tool.label}
           href={tool.href}
@@ -213,7 +270,7 @@ function TitlebarToolButton({ navigate, tool }: { navigate: ReturnType<typeof us
           target="_blank"
           title={tool.title ?? tool.label}
         >
-          {tool.icon}
+          {content}
         </a>
       </Button>
     )
@@ -233,12 +290,12 @@ function TitlebarToolButton({ navigate, tool }: { navigate: ReturnType<typeof us
         tool.onSelect?.()
       }}
       onPointerDown={event => event.stopPropagation()}
-      size="icon-titlebar"
+      size={size}
       title={tool.title ?? tool.label}
       type="button"
       variant="ghost"
     >
-      {tool.icon}
+      {content}
     </Button>
   )
 }

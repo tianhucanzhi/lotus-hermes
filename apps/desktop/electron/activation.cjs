@@ -30,6 +30,12 @@ function normalizeCode(raw) {
     .replace(/\s+/g, '')
 }
 
+function normalizeEditionType(raw) {
+  const value = Number(raw)
+
+  return value === 2 ? 2 : 1
+}
+
 function getMachineId() {
   const raw = [os.hostname(), os.platform(), os.arch(), os.userInfo().username].join('|')
   return crypto.createHash('sha256').update(raw).digest('hex').slice(0, 32)
@@ -105,7 +111,7 @@ async function validateCodeInDb(code, machineId, machineName, appVersion) {
 
   return withDb(async conn => {
     const [rows] = await conn.execute(
-      `SELECT id, code, expires_at, max_activations, activation_count, status
+      `SELECT id, code, expires_at, max_activations, activation_count, status, type
        FROM activation_codes
        WHERE code = ?
        LIMIT 1`,
@@ -173,7 +179,8 @@ async function validateCodeInDb(code, machineId, machineName, appVersion) {
     return {
       ok: true,
       code: row.code,
-      expiresAt: expiresAt.toISOString()
+      expiresAt: expiresAt.toISOString(),
+      editionType: normalizeEditionType(row.type)
     }
   })
 }
@@ -201,7 +208,8 @@ async function getActivationStatus({ localPath, appVersion, skipRemote = false }
       code: local.code,
       expiresAt: local.expiresAt,
       activatedAt: local.activatedAt,
-      machineId
+      machineId,
+      editionType: normalizeEditionType(local.editionType)
     }
   }
 
@@ -216,7 +224,8 @@ async function getActivationStatus({ localPath, appVersion, skipRemote = false }
       code: remote.code,
       expiresAt: remote.expiresAt,
       activatedAt: local.activatedAt || new Date().toISOString(),
-      machineId
+      machineId,
+      editionType: remote.editionType
     }
 
     writeLocalActivation(localPath, updated)
@@ -226,7 +235,8 @@ async function getActivationStatus({ localPath, appVersion, skipRemote = false }
       code: updated.code,
       expiresAt: updated.expiresAt,
       activatedAt: updated.activatedAt,
-      machineId
+      machineId,
+      editionType: updated.editionType
     }
   } catch {
     return {
@@ -235,6 +245,7 @@ async function getActivationStatus({ localPath, appVersion, skipRemote = false }
       expiresAt: local.expiresAt,
       activatedAt: local.activatedAt,
       machineId,
+      editionType: normalizeEditionType(local.editionType),
       offline: true
     }
   }
@@ -268,7 +279,8 @@ async function redeemActivationCode({ localPath, code, appVersion }) {
     code: result.code,
     expiresAt: result.expiresAt,
     activatedAt: new Date().toISOString(),
-    machineId
+    machineId,
+    editionType: result.editionType
   }
 
   writeLocalActivation(localPath, payload)
@@ -278,7 +290,8 @@ async function redeemActivationCode({ localPath, code, appVersion }) {
     code: payload.code,
     expiresAt: payload.expiresAt,
     activatedAt: payload.activatedAt,
-    machineId
+    machineId,
+    editionType: payload.editionType
   }
 }
 

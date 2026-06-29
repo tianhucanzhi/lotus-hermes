@@ -48,12 +48,29 @@ function writeBinaryIfChanged(target, buffer) {
   console.log(`[generate-icons] wrote ${path.relative(ROOT, target)} (${buffer.length} bytes)`)
 }
 
+function assertValidIco(buffer, label) {
+  if (buffer.length < 6) {
+    throw new Error(`${label}: ico output too small`)
+  }
+
+  if (buffer[0] === 0 && buffer[1] === 0 && buffer[2] === 1 && buffer[3] === 0) {
+    return
+  }
+
+  if (buffer[0] === 0x89 && buffer[1] === 0x50) {
+    throw new Error(`${label}: png-to-ico returned PNG data instead of a Windows .ico`)
+  }
+
+  throw new Error(`${label}: invalid ico header`)
+}
+
 function writeIco(pngPaths, target) {
   const ico = execFileSync('npx', ['--yes', 'png-to-ico', ...pngPaths], {
     cwd: ROOT,
     shell: true,
     stdio: ['ignore', 'pipe', 'inherit']
   })
+  assertValidIco(ico, path.relative(ROOT, target))
   writeBinaryIfChanged(target, ico)
 }
 

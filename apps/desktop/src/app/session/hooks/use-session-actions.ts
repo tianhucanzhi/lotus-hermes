@@ -10,7 +10,7 @@ import { embeddedImageUrls, textWithoutEmbeddedImages } from '@/lib/embedded-ima
 import { setSessionYolo } from '@/lib/yolo-session'
 import { clearComposerAttachments, clearComposerDraft } from '@/store/composer'
 import { clearQueuedPrompts } from '@/store/composer-queue'
-import { $pinnedSessionIds } from '@/store/layout'
+import { $pinnedSessionIds, prependSidebarSessionOrder } from '@/store/layout'
 import { clearNotifications, notify, notifyError } from '@/store/notifications'
 import { requestDesktopOnboarding } from '@/store/onboarding'
 import { $activeGatewayProfile, $newChatProfile, ensureGatewayProfile, normalizeProfileKey } from '@/store/profile'
@@ -175,10 +175,11 @@ function upsertOptimisticSession(
   preview: string | null = null
 ) {
   const now = Date.now() / 1000
-  // Stamp the profile the session was just created on (= the live gateway's
-  // profile) so the scoped sidebar shows the new row immediately instead of
-  // filtering it out as "default" until the aggregator re-fetches.
-  const profileKey = normalizeProfileKey($activeGatewayProfile.get())
+  // Stamp the owning profile the chat was created on so scoped sidebars show the
+  // row immediately. Prefer $newChatProfile (set by the per-profile "+" in the
+  // all-profiles view) over the live gateway pointer in case the swap hasn't
+  // landed on the atom yet.
+  const profileKey = normalizeProfileKey($newChatProfile.get() ?? $activeGatewayProfile.get())
 
   const session: SessionInfo = {
     cwd: created.info?.cwd ?? null,
@@ -200,6 +201,8 @@ function upsertOptimisticSession(
   }
 
   setSessions(prev => [session, ...prev.filter(s => s.id !== id)])
+  setSessionsTotal(prev => Math.max(prev, $sessions.get().length))
+  prependSidebarSessionOrder(id)
 }
 
 function patchSessionWorkspace(sessionId: string, cwd: string | undefined) {
